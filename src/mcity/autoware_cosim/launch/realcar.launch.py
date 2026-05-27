@@ -12,7 +12,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'control_cav': False,
-            'cosim_controlled_vehicle_keys': ['terasim_actor_info'],
+            'cosim_controlled_vehicle_keys': ['terasim_actor_info','cav_1_info','cav_2_info'],
         }]
     )
 

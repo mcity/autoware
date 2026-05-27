@@ -44,8 +44,8 @@ class AutowarePlanning(Node):
         vd_list = []
         ori_list = []
 
-        # 125 * 0.1 meter = 12.5m max distance
-        max_num_points = 125
+        # 500 * 0.1 meter = 50m max distance
+        max_num_points = 500
         num_points_to_store = min(max_num_points, len(msg.points))
 
         for i in range(num_points_to_store):
