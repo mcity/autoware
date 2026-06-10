@@ -57,6 +57,7 @@ class StanleyController:
         y_vec: List[float],
         ori_vec: List[float],
         heading_offset: float = 0.0,
+        start_idx: int = 0,
     ) -> float:
         """
         Returns the steering wheel angle command [rad].
@@ -77,9 +78,12 @@ class StanleyController:
         fy = pos_y + self.wheelbase * math.sin(yaw)
 
         # ── Step 2: closest path point to front axle ─────────────────────────
+        # Search forward from start_idx so the controller never snaps back onto
+        # path points the vehicle has already passed (e.g. after exiting a turn).
+        search_from = max(0, start_idx - 1)
         min_dist = float('inf')
-        target_idx = 0
-        for i in range(len(x_vec)):
+        target_idx = search_from
+        for i in range(search_from, len(x_vec)):
             d = math.sqrt((x_vec[i] - fx) ** 2 + (y_vec[i] - fy) ** 2)
             if d < min_dist:
                 min_dist = d

@@ -72,6 +72,7 @@ class PathProcessor:
         self.y_vec   = list(y_vec)
         self.vd_vec  = list(vd_vec)
         self.ori_vec = list(ori_vec)
+        self.closest_index = 1  # reset on new path so search doesn't look backwards
         self._downsampling(preview_time, desired_time_resolution)
 
     # ── called from on_timer ─────────────────────────────────────────────────
@@ -125,9 +126,12 @@ class PathProcessor:
         self.ori_vec = ds_ori
 
     def _get_closest_index(self, pos_x: float, pos_y: float) -> int:
+        # Search forward from the last known closest index (never more than 2 steps
+        # back) so the index cannot snap backwards onto points already passed.
+        search_start = max(1, self.closest_index - 2)
         min_dist = float('inf')
-        best_idx = 1
-        for i in range(1, len(self.x_vec) - 1):
+        best_idx = search_start
+        for i in range(search_start, len(self.x_vec) - 1):
             d = math.sqrt(
                 (self.x_vec[i] - pos_x) ** 2
                 + (self.y_vec[i] - pos_y) ** 2

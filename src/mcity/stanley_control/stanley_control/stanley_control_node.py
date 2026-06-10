@@ -24,6 +24,7 @@ from mcity_msgs.msg import Control, VehicleState, VehiclePlanning
 
 from .path_process import PathProcessor, quaternion_to_yaw
 from .stanley_controller import StanleyController
+from .vehicle_params import MAX_STEERING_WHEEL_ANGLE
 from .speed_control import (
     SpeedController,
     GEAR_DRIVE, GEAR_PARK,
@@ -54,6 +55,8 @@ class StanleyControlNode(Node):
         # Stanley steering gains
         self.declare_parameter('stanley_k',                     0.5)
         self.declare_parameter('stanley_k_soft',                1.0)
+        # Throttle attenuation when steering (0 = no attenuation, 1 = zero throttle at max steer)
+        self.declare_parameter('steer_throttle_k',              1.0)
         # Cascaded PID — outer loop (velocity → desired acceleration)
         self.declare_parameter('speed_kp_v',                    1.5)
         self.declare_parameter('speed_ki_v',                    0.5)
@@ -74,6 +77,7 @@ class StanleyControlNode(Node):
         desired_dt     = self.get_parameter('desired_time_resolution').value
         stanley_k      = self.get_parameter('stanley_k').value
         stanley_k_soft = self.get_parameter('stanley_k_soft').value
+        self._steer_throttle_k = self.get_parameter('steer_throttle_k').value
 
         self._trajectory_abort_size       = self.get_parameter('trajectory_abort_size').value
         self._trajectory_loose_abort_size = self.get_parameter('trajectory_loose_abort_size').value
@@ -295,6 +299,7 @@ class StanleyControlNode(Node):
                 y_vec=self._path_proc.y_vec,
                 ori_vec=self._path_proc.ori_vec,
                 heading_offset=self._path_proc.heading_offset,
+                start_idx=self._path_proc.closest_index,
             )
 
         # ── Step 4: speed control ────────────────────────────────────────────
@@ -306,6 +311,12 @@ class StanleyControlNode(Node):
             estop=self._p2c_estop,
             acc_d=self._p2c_acc_d,
         )
+
+        # ── Step 5: throttle attenuation during steering ─────────────────────
+        # Scale throttle down linearly with normalized steering angle magnitude.
+        # steer_throttle_k=1.0 → zero throttle at max steering wheel angle.
+        steer_norm = abs(steering_cmd) / MAX_STEERING_WHEEL_ANGLE
+        throttle *= max(0.0, 1.0 - self._steer_throttle_k * steer_norm)
 
         self._publish(cmd, steering_cmd, throttle, brake, gear)
 
