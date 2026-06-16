@@ -1,0 +1,31 @@
+<?xml version="1.2"?>
+<package format="2">
+  <name>mcity_mache_bywire</name>
+  <version>1.0.0</version>
+  <description>The mcity_mache_bywire package (Python)</description>
+
+  <maintainer email="zhijieq@umich.edu">Zhijie Qiao</maintainer>
+  <license>To Commercialize</license>
+  <author email="shaobxu@gmail.com">shaobing</author>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>mcity_msgs</depend>
+  <depend>ds_dbw_msgs</depend>
+  <depend>dbw_fca_msgs</depend>
+  <depend>dbw_ford_msgs</depend>
+
+  <exec_depend>ros2launch</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+
+</package>

@@ -53,10 +53,27 @@ def generate_launch_description():
                 # ── Stanley gains ────────────────────────────────────────────
                 # stanley_k:      increase for tighter tracking; decrease if
                 #                 oscillating. Tune on vehicle, start at 0.5.
-                # stanley_k_soft: min effective speed [m/s] in the CTE term
-                #                 — prevents large steering at near-zero speed.
-                {'stanley_k':                   0.5},
-                {'stanley_k_soft':              1.0},
+                # stanley_k_soft: added to speed in the CTE-term denominator
+                #                 (atan(k*e / (k_soft + v))). The low-speed
+                #                 cross-track gain is k/k_soft — keep it ≲1 to
+                #                 stop the steering oscillating near a standstill.
+                {'stanley_k':                   2.0},
+                {'stanley_k_soft':              2.0},
+                # stanley_k_yaw: yaw-rate damping gain [s]. Damps the heading
+                #                feedback. NOTE: the vehicle's reported yaw_rate
+                #                is unpopulated, so the node derives yaw rate
+                #                kinematically from the measured steering. Raise
+                #                if it still oscillates; lower (toward 0) if it
+                #                feels sluggish or over-damped on curves.
+                {'stanley_k_yaw':               0.3},
+                # Rate limiter: max steering-wheel angle change per second [rad/s].
+                # 1.5 was far too slow: the limiter wound up to full lock and
+                # took seconds to unwind, self-sustaining a steering limit cycle.
+                {'steer_rate_limit':            4.0},
+                # Anti-wind-up: max lead [rad] the command may have over the
+                # measured wheel. Caps the limiter so it cannot run to full lock
+                # ahead of the actuator. Lower if steering still overshoots.
+                {'steer_windup_band':           0.6},
             ],
             output='screen',
         ),

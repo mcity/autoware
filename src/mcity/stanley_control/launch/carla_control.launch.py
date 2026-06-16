@@ -31,6 +31,7 @@ def generate_launch_description():
                 {'trajectory_loose_abort_size': 75},
                 {'stanley_k':                   0.5},
                 {'stanley_k_soft':              1.0},
+                {'stanley_k_yaw':               0.5},
             ],
             output='screen',
         ),

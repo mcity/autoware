@@ -2,7 +2,14 @@
 Stanley lateral controller.
 
 Formula:
-    delta = heading_error + atan(k * cte_front / max(v, v_min))
+    delta = heading_error
+          + atan(k * cte_front / (k_soft + v))
+          + k_yaw * (yaw_rate_desired - yaw_rate_measured)
+
+The yaw-rate damping term (last line) damps the otherwise un-damped heading
+feedback, which limit-cycles at higher speed when it fights steering/sensor
+lag.  yaw_rate_desired = v * path_curvature, so the term is zero in steady-
+state cornering — it adds damping without an understeer bias.
 
 where cte_front is the signed cross-track error measured at the **front axle**
 (not the CoM), which is the key distinction of the Stanley method.
@@ -33,18 +40,24 @@ class StanleyController:
     Parameters
     ----------
     k       : Stanley gain on the cross-track error term.
-    k_soft  : Softening speed [m/s] — avoids division by zero at standstill.
+    k_soft  : Softening speed [m/s] — added to v in the denominator.  Bounds the
+              low-speed cross-track gain at k/k_soft and prevents the steering
+              from oscillating near a standstill.
+    k_yaw   : Yaw-rate damping gain [s].  Damps the heading feedback to stop the
+              steering oscillating at higher speed.  0 disables the term.
     wheelbase : Distance from rear to front axle [m].
     """
 
     def __init__(
         self,
         k: float = 0.5,
-        k_soft: float = 1.0,
+        k_soft: float = 2.5,
+        k_yaw: float = 0.5,
         wheelbase: float = WHEELBASE,
     ):
         self.k         = k
         self.k_soft    = k_soft
+        self.k_yaw     = k_yaw
         self.wheelbase = wheelbase
 
     def compute_steering(
@@ -56,6 +69,7 @@ class StanleyController:
         x_vec: List[float],
         y_vec: List[float],
         ori_vec: List[float],
+        yaw_rate: float = 0.0,
         heading_offset: float = 0.0,
         start_idx: int = 0,
     ) -> float:
@@ -97,10 +111,23 @@ class StanleyController:
         heading_err  = normalize_angle(path_heading - (yaw + heading_offset))
 
         # ── Step 5: Stanley law ───────────────────────────────────────────────
-        effective_speed = max(speed_x, self.k_soft)
+        # Additive softening (Hoffmann/Thrun): the k_soft term is what keeps the
+        # discrete controller stable at low speed.  Using max(v, k_soft) instead
+        # would pin the denominator at k_soft and leave the low-speed cross-track
+        # gain at k/k_soft, which causes the steering to limit-cycle near a stop.
+        effective_speed = self.k_soft + speed_x
         cte_term        = math.atan2(self.k * cte, effective_speed)
 
-        wheel_angle = normalize_angle(heading_err + cte_term)
+        # ── Step 6: yaw-rate damping ─────────────────────────────────────────
+        # The heading_err term has no damping, so at higher speed it fights
+        # steering/sensor lag and limit-cycles.  Damp the deviation of the
+        # measured yaw rate from the path's desired yaw rate (v * curvature).
+        # Zero in steady-state cornering, negligible at low speed.
+        curvature        = self._path_curvature(x_vec, y_vec, ori_vec, target_idx)
+        yaw_rate_desired = speed_x * curvature
+        yaw_damp         = self.k_yaw * (yaw_rate_desired - yaw_rate)
+
+        wheel_angle = normalize_angle(heading_err + cte_term + yaw_damp)
         wheel_angle = max(-MAX_WHEEL_ANGLE, min(MAX_WHEEL_ANGLE, wheel_angle))
 
         steering_wheel_angle = wheel_angle * STEERING_RATIO
@@ -146,3 +173,27 @@ class StanleyController:
             dist = -dist   # vehicle is left of path → negative cte
 
         return dist
+
+    def _path_curvature(
+        self,
+        x_vec: List[float], y_vec: List[float],
+        ori_vec: List[float],
+        idx: int,
+    ) -> float:
+        """
+        Local path curvature [1/m] at idx = d(heading)/d(arclength), estimated
+        from the neighbouring points.  Sign matches the steering convention
+        (positive = left turn).
+        """
+        n = len(ori_vec)
+        i_pre  = max(0, idx - 1)
+        i_next = min(n - 1, idx + 1)
+        if i_pre == i_next:
+            return 0.0
+
+        dheading = normalize_angle(float(ori_vec[i_next]) - float(ori_vec[i_pre]))
+        ds = math.hypot(x_vec[i_next] - x_vec[i_pre], y_vec[i_next] - y_vec[i_pre])
+        if ds < 1e-6:
+            return 0.0
+
+        return dheading / ds

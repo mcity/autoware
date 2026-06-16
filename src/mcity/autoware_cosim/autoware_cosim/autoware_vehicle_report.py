@@ -1,14 +1,14 @@
 # Copyright 2019 Autoware Foundation
 # Licensed under the Apache License, Version 2.0
 
-import rclpy
+import rclpy, math
 from rclpy.node import Node
 from autoware_auto_vehicle_msgs.msg import VelocityReport, SteeringReport
 from mcity_msgs.msg import VehicleState  # adjust this if your message package differs
 from builtin_interfaces.msg import Time
 
 
-STEER_TO_TIRE_RATIO = 16.0  # Adjust according to your vehicle configuration
+STEER_TO_TIRE_RATIO = 17.0  # Adjust according to your vehicle configuration
 
 
 class VehicleReportNode(Node):

@@ -95,7 +95,7 @@ class PathProcessor:
         self.slope = 0.0
 
     def remaining_size(self) -> int:
-        return max(0, len(self.x_vec) - self.closest_index)
+        return len(self.x_vec)
 
     # ── private helpers ──────────────────────────────────────────────────────
 

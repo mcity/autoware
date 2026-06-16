@@ -1,48 +1,47 @@
 """
-stanley_control_node.py
+pursuit_control_node.py
 
-ROS2 node: Stanley lateral control + cascaded PID speed control (Mach-E).
+ROS2 node: Pure Pursuit lateral control + cascaded PID speed control (Mach-E).
 
-Subscribes  (same topics as preview_control):
+Subscribes  (same topics as stanley_control):
   /mcity/cav_pose          — geometry_msgs/PoseWithCovarianceStamped
   /mcity/vehicle_state     — mcity_msgs/VehicleState
   /mcity/vehicle_planning  — mcity_msgs/VehiclePlanning
 
-Publishes   (new topic name):
-  /mcity/stanley_control/vehicle_control  — mcity_msgs/Control
+Publishes:
+  /mcity/pursuit_control/vehicle_control  — mcity_msgs/Control
 
-Timer: 50 Hz (20 ms), identical to preview_control.
+Timer: 50 Hz (20 ms), identical to stanley_control.
 """
 
 import math
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from mcity_msgs.msg import Control, VehicleState, VehiclePlanning
 
 from .path_process import PathProcessor, quaternion_to_yaw
-from .stanley_controller import StanleyController
-from .vehicle_params import STEERING_RATIO, WHEELBASE
+from .pure_pursuit import PurePursuitController
 from .speed_control import (
     SpeedController,
     GEAR_DRIVE, GEAR_PARK,
     ESTOP_NONE, ESTOP_LOW, ESTOP_MEDIUM, ESTOP_HIGH,
 )
+from .vehicle_params import STEERING_RATIO, MAX_STEERING_WHEEL_ANGLE
 
-CONTROL_FREQ_HZ = 50          # Hz
-TIMER_PERIOD_S  = 1.0 / CONTROL_FREQ_HZ   # 0.02 s
+CONTROL_FREQ_HZ = 50
+TIMER_PERIOD_S  = 1.0 / CONTROL_FREQ_HZ
 
 
-class StanleyControlNode(Node):
+class PursuitControlNode(Node):
 
     def __init__(self):
-        super().__init__('stanley_control')
+        super().__init__('pursuit_control')
 
         # ── Parameters ───────────────────────────────────────────────────────
         self.declare_parameter('slope_folder',                  '')
-        self.declare_parameter('max_ey',                        1.5)
+        self.declare_parameter('max_ey',                        3.0)
         self.declare_parameter('max_ephi',                      1.0)
         self.declare_parameter('max_curvature',                 0.2)
         self.declare_parameter('heading_offset',                0.0)
@@ -52,20 +51,30 @@ class StanleyControlNode(Node):
         self.declare_parameter('desired_time_resolution',       0.04)
         self.declare_parameter('trajectory_abort_size',         25)
         self.declare_parameter('trajectory_loose_abort_size',   75)
-        # Stanley steering gains
-        self.declare_parameter('stanley_k',                     5.5)
-        self.declare_parameter('stanley_k_soft',                2.5)
-        self.declare_parameter('stanley_k_yaw',                 0.5)
-        # Steering rate limiter [rad/s of steering-wheel angle]
-        self.declare_parameter('steer_rate_limit',              4.0)
-        # Anti-wind-up: max lead [rad] the rate-limited command may have over
-        # the measured wheel angle. Stops the limiter winding up to full lock.
-        self.declare_parameter('steer_windup_band',             0.6)
-        # Steering-based speed cap: above threshold_deg, vd is capped to limit_kmph;
-        # after steering returns below threshold, vd ramps back up at ramp_rate m/s².
+        # Pure Pursuit gains
+        self.declare_parameter('pp_k',                          0.8)
+        self.declare_parameter('pp_Ld_min',                     2.0)
+        self.declare_parameter('pp_Ld_max',                     8.0)
+        self.declare_parameter('pp_k_ey',                       0.0)
+        self.declare_parameter('pp_k_ephi',                     0.0)
+        self.declare_parameter('pp_k_yawdamp',                  0.0)
+        # Steering-based speed cap
         self.declare_parameter('steer_speed_threshold_deg',     90.0)
         self.declare_parameter('steer_speed_limit_kmph',        5.0)
         self.declare_parameter('steer_speed_ramp_rate',         3.0)
+        # Steering command slew-rate limit [deg/s at the steering wheel].
+        # The EPS actuator can only physically slew at a finite rate (~110 deg/s
+        # measured on the Mach-E by-wire).  Commanding faster than the wheel can
+        # follow makes the command run ahead of the achieved angle, producing a
+        # dead-time limit cycle that diverges at speed.  Cap this at or below the
+        # actuator's true max rate so the command stays in phase with the wheel.
+        self.declare_parameter('steer_cmd_rate_dps',            110.0)
+        # Hard maximum vehicle speed [m/s].  The steering actuator's slew rate
+        # (~110 deg/s at the wheel) bounds the speed at which the pure-pursuit
+        # loop stays stable; above ~2.5 m/s it self-oscillates and diverges.
+        # Keep this at/below the empirically stable speed until the EPS slew
+        # rate is raised.  Set high (e.g. 25) to disable.
+        self.declare_parameter('max_speed_mps',                 2.0)
         # Cascaded PID — outer loop (velocity → desired acceleration)
         self.declare_parameter('speed_kp_v',                    1.5)
         self.declare_parameter('speed_ki_v',                    0.5)
@@ -84,17 +93,26 @@ class StanleyControlNode(Node):
         lateral_offset = self.get_parameter('lateral_offset').value
         preview_time   = self.get_parameter('preview_time').value
         desired_dt     = self.get_parameter('desired_time_resolution').value
-        stanley_k      = self.get_parameter('stanley_k').value
-        stanley_k_soft = self.get_parameter('stanley_k_soft').value
-        stanley_k_yaw  = self.get_parameter('stanley_k_yaw').value
+        pp_k           = self.get_parameter('pp_k').value
+        pp_Ld_min      = self.get_parameter('pp_Ld_min').value
+        pp_Ld_max      = self.get_parameter('pp_Ld_max').value
+        pp_k_ey        = self.get_parameter('pp_k_ey').value
+        pp_k_ephi      = self.get_parameter('pp_k_ephi').value
+        self._k_yawdamp = self.get_parameter('pp_k_yawdamp').value
+
         self._steer_speed_threshold = math.radians(
             self.get_parameter('steer_speed_threshold_deg').value)
         self._steer_speed_limit     = self.get_parameter('steer_speed_limit_kmph').value / 3.6
         self._steer_speed_ramp_rate = self.get_parameter('steer_speed_ramp_rate').value
-        self._steer_rate_limit  = self.get_parameter('steer_rate_limit').value
-        self._steer_windup_band = self.get_parameter('steer_windup_band').value
-        self._prev_steering_cmd = 0.0
-        self._vd_ramp = 100.0   # starts large so no ramp on first tick
+        self._vd_ramp = 100.0
+
+        # Steering command slew-rate limiter state (rad/s, rad).
+        self._steer_cmd_rate  = math.radians(self.get_parameter('steer_cmd_rate_dps').value)
+        self._last_steer_cmd  = 0.0
+
+        # Hard speed cap [m/s] — keeps the vehicle in the actuator-stable regime.
+        self._max_speed = self.get_parameter('max_speed_mps').value
+
         self._trajectory_abort_size       = self.get_parameter('trajectory_abort_size').value
         self._trajectory_loose_abort_size = self.get_parameter('trajectory_loose_abort_size').value
         self._preview_time = preview_time
@@ -103,27 +121,27 @@ class StanleyControlNode(Node):
         self._max_ephi     = max_ephi
 
         # ── Internal state ───────────────────────────────────────────────────
-        self._pos_x   = 0.0
-        self._pos_y   = 0.0
-        self._pos_z   = 0.0
-        self._qx      = 0.0
-        self._qy      = 0.0
-        self._qz      = 0.0
-        self._qw      = 1.0
+        self._pos_x = 0.0
+        self._pos_y = 0.0
+        self._pos_z = 0.0
+        self._qx    = 0.0
+        self._qy    = 0.0
+        self._qz    = 0.0
+        self._qw    = 1.0
 
-        self._speed_x             = 0.0
-        self._yaw_rate            = 0.0
+        self._speed_x              = 0.0
+        self._yaw_rate             = 0.0
         self._steering_wheel_angle = 0.0
-        self._gear_pos            = GEAR_DRIVE
-        self._by_wire_enabled     = False
-        self._brake_state         = 0.0
-        self._throttle_state      = 0.0
+        self._gear_pos             = GEAR_DRIVE
+        self._by_wire_enabled      = False
+        self._brake_state          = 0.0
+        self._throttle_state       = 0.0
 
         self._p2c_timestamp       = 0.0
-        self._p2c_go              = 0
-        self._p2c_estop           = ESTOP_NONE
-        self._p2c_acc_d           = 0.0
         self._p2c_time_resolution = 0.04
+        self._p2c_estop           = ESTOP_NONE
+        self._p2c_go              = 0
+        self._p2c_acc_d           = 0.0
         self._p2c_x_vec           = []
         self._p2c_y_vec           = []
         self._p2c_vd_vec          = []
@@ -140,8 +158,7 @@ class StanleyControlNode(Node):
             lateral_offset=lateral_offset,
         )
 
-        self._stanley = StanleyController(
-            k=stanley_k, k_soft=stanley_k_soft, k_yaw=stanley_k_yaw)
+        self._pp = PurePursuitController(k=pp_k, Ld_min=pp_Ld_min, Ld_max=pp_Ld_max, k_ey=pp_k_ey, k_ephi=pp_k_ephi)
 
         self._speed_ctrl = SpeedController(
             kp_v=self.get_parameter('speed_kp_v').value,
@@ -181,7 +198,7 @@ class StanleyControlNode(Node):
         )
 
         self._timer = self.create_timer(TIMER_PERIOD_S, self._on_timer)
-        self.get_logger().info('stanley_control node started')
+        self.get_logger().info('pursuit_control node started')
 
     # ── Callbacks ────────────────────────────────────────────────────────────
 
@@ -231,16 +248,15 @@ class StanleyControlNode(Node):
 
     def _on_timer(self):
         cmd = Control()
-        cmd.timestamp     = self.get_clock().now().nanoseconds * 1e-9
-        cmd.gear_cmd      = GEAR_DRIVE
+        cmd.timestamp       = self.get_clock().now().nanoseconds * 1e-9
+        cmd.gear_cmd        = GEAR_DRIVE
         cmd.turn_signal_cmd = 0
 
         # ── Guard: go flag ───────────────────────────────────────────────────
         if self._p2c_go == 0:
             throttle, brake, gear = self._speed_ctrl.set_stop(self._speed_x)
             self._publish(cmd, 0.0, throttle, brake, gear)
-            self.get_logger().info(
-                'go=0, stopping', throttle_duration_sec=1.0)
+            self.get_logger().info('go=0, stopping', throttle_duration_sec=1.0)
             return
 
         # ── Guard: stale planning ────────────────────────────────────────────
@@ -249,9 +265,7 @@ class StanleyControlNode(Node):
             throttle, brake, gear = self._speed_ctrl.set_stop(self._speed_x)
             self._publish(cmd, 0.0, throttle, brake, gear)
             self.get_logger().warn(
-                'Planning stale (>1 s), stopping',
-                throttle_duration_sec=1.0,
-            )
+                'Planning stale (>1 s), stopping', throttle_duration_sec=1.0)
             return
 
         # ── Guard: trajectory too short ──────────────────────────────────────
@@ -261,8 +275,7 @@ class StanleyControlNode(Node):
             self._publish(cmd, 0.0, throttle, brake, gear)
             self.get_logger().warn(
                 f'Trajectory too short ({remaining}), stopping',
-                throttle_duration_sec=1.0,
-            )
+                throttle_duration_sec=1.0)
             return
 
         # ── Guard: near end + stopped ────────────────────────────────────────
@@ -279,11 +292,11 @@ class StanleyControlNode(Node):
         self._path_proc.run(
             self._pos_x, self._pos_y,
             self._qx, self._qy, self._qz, self._qw,
-            abs(self._speed_x),
+            self._speed_x,
         )
-        ey   = self._path_proc.ey
-        ephi = self._path_proc.ephi
-        vd   = self._path_proc.vd
+        ey    = self._path_proc.ey
+        ephi  = self._path_proc.ephi
+        vd    = min(self._path_proc.vd, self._max_speed)   # hard actuator-stable speed cap
         slope = self._path_proc.slope
 
         self.get_logger().info(
@@ -295,48 +308,50 @@ class StanleyControlNode(Node):
 
         # ── Step 2: in-path check ────────────────────────────────────────────
         in_path = abs(ey) < self._max_ey and abs(ephi) < self._max_ephi
-        if not in_path and self._p2c_estop < ESTOP_HIGH:
-            self._p2c_estop = ESTOP_HIGH
+        estop   = self._p2c_estop
+        if not in_path:
+            estop = max(estop, ESTOP_HIGH)
             self.get_logger().warn(
                 f'Out of path (ey={ey:.2f}, ephi={ephi:.2f}), estop HIGH',
                 throttle_duration_sec=0.5,
             )
 
-        # ── Step 3: Stanley steering ─────────────────────────────────────────
-        yaw = quaternion_to_yaw(self._qx, self._qy, self._qz, self._qw)
+        # ── Step 3: Pure Pursuit steering ────────────────────────────────────
+        yaw          = quaternion_to_yaw(self._qx, self._qy, self._qz, self._qw)
         steering_cmd = 0.0
 
-        # The vehicle's reported yaw_rate is unpopulated (always 0) on this DBW,
-        # so derive it kinematically from the measured steering (bicycle model).
-        yaw_rate_est = (
-            self._speed_x
-            * math.tan(self._steering_wheel_angle / STEERING_RATIO)
-            / WHEELBASE
-        )
-
-        if abs(self._speed_x) > 0.001 and len(self._path_proc.x_vec) >= 2:
-            steering_cmd = self._stanley.compute_steering(
+        if self._speed_x > 0.001 and len(self._path_proc.x_vec) >= 2:
+            steering_cmd = self._pp.compute_steering(
                 pos_x=self._pos_x,
                 pos_y=self._pos_y,
                 yaw=yaw,
-                speed_x=abs(self._speed_x),
+                speed_x=self._speed_x,
                 x_vec=self._path_proc.x_vec,
                 y_vec=self._path_proc.y_vec,
                 ori_vec=self._path_proc.ori_vec,
-                yaw_rate=yaw_rate_est,
                 heading_offset=self._path_proc.heading_offset,
                 start_idx=self._path_proc.closest_index,
+                ey=ey,
+                ephi=ephi,
             )
+            # Yaw rate damping — counter-steer proportional to measured rotation
+            # rate so the car stops rotating quickly after a lane change.
+            # ephi/ey go to zero once heading catches up, but the wheel is still
+            # physically turned; yaw_rate stays non-zero and catches that lag.
+            if self._k_yawdamp > 1e-9:
+                steering_cmd -= self._k_yawdamp * self._yaw_rate * STEERING_RATIO
+                steering_cmd = max(-MAX_STEERING_WHEEL_ANGLE,
+                                   min(MAX_STEERING_WHEEL_ANGLE, steering_cmd))
+
             self.get_logger().info(
                 f'steer_cmd={math.degrees(steering_cmd):.1f}deg '
                 f'steer_meas={math.degrees(self._steering_wheel_angle):.1f}deg '
-                f'ey={ey:.3f}m',
+                f'ey={ey:.3f}m ephi={math.degrees(ephi):.1f}deg '
+                f'yaw_rate={math.degrees(self._yaw_rate):.1f}deg/s',
                 throttle_duration_sec=0.2,
             )
 
-        # ── Step 4: steering-based speed cap + gradual recovery ─────────────────
-        # Snap vd down immediately when steered hard; ramp it back up slowly
-        # so the PID doesn't see a step change and spike the throttle.
+        # ── Step 4: steering-based speed cap + gradual recovery ──────────────
         if abs(self._steering_wheel_angle) >= self._steer_speed_threshold:
             self._vd_ramp = min(vd, self._steer_speed_limit)
         else:
@@ -350,34 +365,8 @@ class StanleyControlNode(Node):
             speed_x=self._speed_x,
             slope=slope,
             gear_pos=self._gear_pos,
-            estop=self._p2c_estop,
+            estop=estop,
             acc_d=self._p2c_acc_d,
-        )
-
-        # ── Step 6: steering rate limiter + anti-wind-up ─────────────────────
-        # Rate-limit from the previous command for smoothness, then cap the
-        # command *magnitude* to what the wheel has actually achieved plus a
-        # margin (|cmd| <= |meas| + band).  This stops a saturated command from
-        # winding out to full lock while the (slow) actuator lags far behind,
-        # WITHOUT ever forcing the command toward the wheel — so when the
-        # actuator overshoots, the command is still free to return to centre.
-        raw_cmd   = steering_cmd
-        max_delta = self._steer_rate_limit * TIMER_PERIOD_S
-        meas      = self._steering_wheel_angle
-        steering_cmd = max(self._prev_steering_cmd - max_delta,
-                           min(self._prev_steering_cmd + max_delta, raw_cmd))
-        windup_limit = abs(meas) + self._steer_windup_band
-        steering_cmd = max(-windup_limit, min(windup_limit, steering_cmd))
-        self._prev_steering_cmd = steering_cmd
-
-        self.get_logger().info(
-            f'raw={math.degrees(raw_cmd):.1f}deg '
-            f'cmd={math.degrees(steering_cmd):.1f}deg '
-            f'meas={math.degrees(meas):.1f}deg '
-            f'rate_limited={abs(raw_cmd - steering_cmd) > 1e-3} '
-            f'yaw_est={math.degrees(yaw_rate_est):.1f}deg/s '
-            f'v={self._speed_x:.1f}',
-            throttle_duration_sec=0.2,
         )
 
         self._publish(cmd, steering_cmd, throttle, brake, gear)
@@ -392,16 +381,26 @@ class StanleyControlNode(Node):
         brake: float,
         gear: int,
     ):
-        cmd.steering_cmd  = float(steering)
-        cmd.throttle_cmd  = float(throttle)
-        cmd.brake_cmd     = float(brake)
-        cmd.gear_cmd      = int(gear)
+        # Slew-rate limit the steering command to what the EPS can physically
+        # track (steer_cmd_rate_dps).  Without this the command saturates to
+        # full lock while the wheel is still slewing, and the resulting dead
+        # time drives a diverging limit cycle at speed.  Limiting keeps the
+        # commanded angle in phase with the achieved angle.
+        max_delta = self._steer_cmd_rate * TIMER_PERIOD_S
+        steering  = max(self._last_steer_cmd - max_delta,
+                        min(self._last_steer_cmd + max_delta, float(steering)))
+        self._last_steer_cmd = steering
+
+        cmd.steering_cmd = float(steering)
+        cmd.throttle_cmd = float(throttle)
+        cmd.brake_cmd    = float(brake)
+        cmd.gear_cmd     = int(gear)
         self._pub_cmd.publish(cmd)
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = StanleyControlNode()
+    node = PursuitControlNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
