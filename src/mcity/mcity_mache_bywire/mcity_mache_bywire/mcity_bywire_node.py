@@ -98,14 +98,19 @@ class McityBywire(Node):
         self.brake_msg.cmd_type = BrakeCmd.CMD_PERCENT  # 14
         self.brake_msg.cmd      = 0.0
 
-        # SteeringCmd: CMD_ANGLE (=2) for ds_dbw_msgs -MKZ
-        # SteeringCmd: CMD_YAW_RATE (=4) for ds_dbw_msgs -MachE
+        # SteeringCmd: CMD_ANGLE (=2) works on the Mach-E EPS, but the actuator
+        # will NOT engage (report.enabled stays false) unless control_mode is
+        # set to CONTROL_LANE_KEEP. With the default control_mode=UNSPECIFIED (0)
+        # the driver receives the command (timeout clears) but silently refuses
+        # to enable. Verified live 2026-08-14: CMD_ANGLE + CONTROL_LANE_KEEP ->
+        # enabled=true; CMD_ANGLE + UNSPECIFIED -> enabled=false.
         self.steering_msg = SteeringCmd()
-        self.steering_msg.enable   = True
-        self.steering_msg.ignore   = False
-        self.steering_msg.clear    = False
-        self.steering_msg.cmd_type = SteeringCmd.CMD_ANGLE   # 2
-        self.steering_msg.cmd      = 0.0
+        self.steering_msg.enable       = True
+        self.steering_msg.ignore       = False
+        self.steering_msg.clear        = False
+        self.steering_msg.cmd_type     = SteeringCmd.CMD_ANGLE            # 2
+        self.steering_msg.control_mode = SteeringCmd.CONTROL_LANE_KEEP    # 2 — required for Mach-E to engage
+        self.steering_msg.cmd          = 0.0
         # Steering rate limit. ds_dbw SteeringCmd.cmd_rate is in DEG/S
         # (range 0-1016; 0 = firmware default, INFINITY = unlimited).
         # The previous value 1.75*pi was written as if rad/s — it evaluated to
