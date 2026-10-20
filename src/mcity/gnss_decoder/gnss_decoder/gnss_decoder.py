@@ -137,14 +137,16 @@ class GnssDecoder(Node):
         quat = R.from_quat([qx, qy, qz, qw])
 
         # define the rotations
-        rotationAroundX = R.from_euler("x", 90, degrees=True)
-        rotationAroundY = R.from_euler("y", -90, degrees=True)
-        rotationAroundZ = R.from_euler("z", 90, degrees=True)
+        #rotationAroundX = R.from_euler("x", 90, degrees=True)
+        #rotationAroundY = R.from_euler("y", -90, degrees=True)
+        #rotationAroundZ = R.from_euler("z", 90, degrees=True)
 
         # apply the rotations
-        quat = quat * rotationAroundX * rotationAroundY * rotationAroundZ
-
+        #quat = quat * rotationAroundX * rotationAroundY * rotationAroundZ
+        #q_ned_to_enu = R.from_quat([np.sqrt(2)/2,np.sqrt(2)/2,0.0,0.0])
+        #quat_enu = q_ned_to_enu * quat
         # extract the updated quaternion components
+        #qx, qy, qz, qw = quat.as_quat()
         qx, qy, qz, qw = quat.as_quat()
 
         orientation = self.get_orientation_from_quaternion(qx, qy, qz, qw)

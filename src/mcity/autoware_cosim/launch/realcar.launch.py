@@ -44,18 +44,10 @@ def generate_launch_description():
         output='screen'
     )
 
-    gnss_node = Node(
-        package='gnss_decoder',
-        executable='gnss_decoder',
-        name='gnss_decoder',
-        output='screen'
-    )
-
     return LaunchDescription([
         autoware_vehicle_plugin_node,
         autoware_vehicle_report_node,
         autoware_tls_plugin_node,
         autoware_dummy_grid_node,
         autoware_planning_node,
-        gnss_node
     ]) 
