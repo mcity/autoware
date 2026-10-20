@@ -33,9 +33,9 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
   (vehicle params, LQR weights, `_measured`, `_history`). Generated, never hand-edited.
 - Current set (2026-10-20) is PROVISIONAL: template values (mass 2300, ratio 16, Cf=Cr=150k, tau 0.15,
   delay 0.2), r = 16 withoutdelay / 4 withdelay. Replace by driving + `update_from_drive.py`.
-- Regenerate / calibrate with the skill in `~/autoware/preview-gain-calibration/` (SKILL.md):
+- Regenerate / calibrate with the skill in `~/autoware/.claude/skills/preview-gain-calibration/` (SKILL.md):
   ```bash
-  S=~/autoware/preview-gain-calibration/scripts; source ~/autoware/install/setup.bash
+  S=~/autoware/.claude/skills/preview-gain-calibration/scripts; source ~/autoware/install/setup.bash
   $S/record_drive.sh                                  # drive, Ctrl-C
   python3 $S/update_from_drive.py ~/mache_calib/drives/bags/<drive>   # fit, gate, retune, install (+backup)
   ```

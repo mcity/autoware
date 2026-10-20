@@ -5,8 +5,9 @@
 
 --steady     constant-steer circles (Test 2). Gives steering ratio and understeer gradient Kus:
                  steer_sw = ratio * (L * kappa + Kus * a_y) + offset,  kappa = r / v,  a_y = v * r
---transient  sine-steer runs at speed (Test 3). Splits Kus into front/rear cornering stiffness
-             Cf, Cr by matching the measured yaw rate with a linear bicycle model.
+--transient  sine-steer runs at speed (Test 3), or ordinary drives. Splits Kus into front/rear
+             cornering stiffness Cf, Cr by matching the measured yaw rate with a linear bicycle model,
+             on the most steering-excited 5 s windows (v > 4 m/s, steady speed) up to --max-transient-s.
              Without it, Cr is assumed from --cr-norm and Cf solved from Kus (less accurate).
 
 Signals (from bag_to_csv.py):
@@ -93,9 +94,24 @@ def steady_windows(run, win=2.0, step=0.5):
     return np.array(rows)
 
 
-def bicycle_yaw(p, Cf, Cr, delta, v):
+def transient_windows(run, win=5.0, step=2.5):
+    """-> [(excitation, slice)] of windows at speed with steering activity."""
+    n, s = int(win / DT), int(step / DT)
+    out = []
+    for i in range(0, len(run["t"]) - n, s):
+        sl = slice(i, i + n)
+        v = run["v"][sl]
+        if v.min() < 4.0 or v.std() > 1.0 or not np.all(np.isfinite(run["r"][sl])):
+            continue
+        exc = np.degrees(run["sw"][sl].std())
+        if exc > 1.0:
+            out.append((exc, sl))
+    return out
+
+
+def bicycle_yaw(p, Cf, Cr, delta, v, r0=0.0):
     m, Iz, lf, lr = p["mass"], p["Iz"], p["lf"], p["lr"]
-    vy = r = 0.0
+    vy, r = 0.0, r0
     out = np.empty_like(delta)
     sub = 4
     h = DT / sub
@@ -117,6 +133,8 @@ def main():
     ap.add_argument("--speed-scale", type=float, default=1.0, help="only used without /ins/odometry")
     ap.add_argument("--cr-norm", type=float, default=10.0,
                     help="fallback rear stiffness per unit axle load [1/rad] if no --transient")
+    ap.add_argument("--max-transient-s", type=float, default=180.0,
+                    help="cap on transient data used for Cf/Cr (most excited windows first)")
     ap.add_argument("--update", action="store_true", help="write results into --params")
     a = ap.parse_args()
     p = json.load(open(a.params))
@@ -165,14 +183,20 @@ def main():
             for x in truns:
                 x["r"] = -x["r"]
 
+        wins = sorted(((e, x, sl) for x in truns for e, sl in transient_windows(x)), key=lambda w: -w[0])
+        wins = wins[:max(1, int(a.max_transient_s / 5.0))]
+        if not wins:
+            raise SystemExit("no transient windows (v > 4 m/s with steering activity) in --transient data")
+        print(f"transient      : {len(wins)} window(s) of 5 s")
+        warm = int(1.0 / DT)   # drop the first second: lateral-velocity state starts at 0
+
         def res(th):
             Cf, Cr = np.exp(th)
             out = []
-            for x in truns:
-                sel = x["v"] > 4.0
-                d = (x["sw"] - off) / ratio
-                rm = smooth(bicycle_yaw(p, Cf, Cr, d, x["v"]), 5)   # same filter as the measurement
-                out.append((rm - x["r"])[sel])
+            for _, x, sl in wins:
+                d = (x["sw"][sl] - off) / ratio
+                rm = smooth(bicycle_yaw(p, Cf, Cr, d, x["v"][sl], x["r"][sl][0]), 5)   # same filter as the measurement
+                out.append((rm - x["r"][sl])[warm:])
             kus_model = m / L * (lr / Cf - lf / Cr)
             out.append(np.array([(kus_model - Kus) / max(abs(Kus), 1e-3) * 0.5]))
             return np.concatenate(out)

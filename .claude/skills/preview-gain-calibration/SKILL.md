@@ -35,19 +35,23 @@ so the MachE tables keep the MKZ tuning "feel" on the new plant.
 
 **Code facts that matter for the MachE** (verify they still hold before acting on them):
 
-1. `consider_delay_lag = false` is hard-coded (`path_follow.hpp:82`) and the launch files point to
-   `gain/withoutdelay/`. The stability check shows the MKZ **withoutdelay gains go unstable above
-   ~18 m/s** once a 0.2 s delay + lag is present, while withdelay gains stay damped to 30 m/s.
-   For the MachE, recommend enabling `consider_delay_lag` and using `withdelay/` — this is a code
-   change: propose it, don't make it silently.
+1. Tables: `data/gain/mache/{withdelay,withoutdelay}/` + `params.json` (MachE, used on the car by
+   `launch/mache_control.launch.py`); `data/gain/mkz/` (MKZ originals, used only by `carla_control.launch.py`).
+   `consider_delay_lag` and `steering_ratio` are ROS parameters; `mache_control.launch.py` takes
+   `gain_variant:=withdelay|withoutdelay` (default withdelay → consider_delay_lag true) and reads
+   `steering_ratio` from `params.json`, so regenerating tables keeps the ratio in sync.
+   withoutdelay gains go unstable at speed once a 0.2 s delay + lag is present; withdelay stays damped.
 2. `p2c.cr_vector` is never filled (`path_process.cpp`), so **feedforward is currently inactive**;
    only feedback runs. If someone fills it later, sample curvature every `v·0.04` m ahead.
 3. `path_follow` uses `dERate = v·hE` and `hERate = 0` (not true derivatives). The stability check
    in `gen_preview_gains.py` models exactly this implemented law.
-4. `STEERING_RATIO = 16.0` (MKZ) in `preview_control/include/sx.hpp`, and `publishCmd()` in
-   `preview_control.cpp` multiplies steering by **1.4** — a MachE workaround. `fit_steering.py`
-   reports the by-wire tracking gain K; if K≈0.7 that is what the 1.4 compensates. Steering ratio
+4. The old `* 1.4` steering hack in `publishCmd()` is gone. August 2026 by-wire drives
+   (DBW report cmd vs angle) gave K = 1.00, delay 0.05 s, τ 0.014 s at the ECU, so 1:1 is right.
+   That delay excludes the controller → by-wire node latency, so it is not applied. Steering ratio
    must be the measured one, because gains are in front-wheel angle.
+7. `~/.bashrc` sources `~/mcity_demos`, whose `autoware_preview_control` installs another
+   `libpreview_control_component.so` that comes first on `LD_LIBRARY_PATH`: plain `ros2 run
+   preview_control` loads *that* code. `mache_control.launch.py` prepends this package's lib dir.
 5. `mcity_mache_bywire/mcity_bywire_node.py`: `VehicleState.yaw_rate`, `acc_y`, `speed_y`, `x/y`
    are **never filled** (so its lateral-accel safety rule 6 never fires). Yaw rate must come from
    `/ins/imu`, true speed from `/ins/odometry`. `speed_x` = wheel speed × MKZ wheel radius
@@ -67,12 +71,37 @@ scripts/
   fit_weights.py        back-fits Q/R to an existing table (already done for MKZ; rarely needed)
   mkz.json              MKZ params + fitted weights (reference)
   mache.json            MachE TEMPLATE - copy it, fill it, never commit placeholder values as final
+  record_drive.sh       record a calibration bag while driving around (manual or by-wire)
+  update_from_drive.py  bags -> export -> fits -> range gate -> stability-tuned tables -> install (with backup)
 ```
 
 Python deps: `numpy scipy` (+ `matplotlib` for `--plot`). On the car: `sudo apt install python3-scipy python3-matplotlib`
 or `pip install --user numpy scipy matplotlib`.
 
-## Workflow
+## Drive-around mode (default when the user is in the car)
+
+No dedicated pad tests: record ordinary drives and update after each one. Gains load at start-up,
+so they never change mid-drive. Relaunch preview_control afterwards.
+```bash
+S=~/autoware/.claude/skills/preview-gain-calibration/scripts; source ~/autoware/install/setup.bash
+$S/record_drive.sh                         # drive, Ctrl-C  -> ~/mache_calib/drives/bags/drive_<time>
+python3 $S/update_from_drive.py ~/mache_calib/drives/bags/drive_<time>      # fits on ALL stored drives
+ros2 launch preview_control mache_control.launch.py                          # loads the new tables
+```
+What each kind of driving feeds:
+- **steering delay/τ**: by-wire driving with any controller (needs `/mcity/vehicle_control`);
+  ≥ 10 s of segments where the command moves ≥ 5°
+- **steering ratio**: steady curves/roundabouts (≥ 6 windows of 2 s at constant speed and steering, |sw| > 5°),
+  at several speeds
+- **Cf/Cr**: lane changes / S-curves above 4 m/s at steady speed (an applied value also needs an accepted ratio)
+
+Each group is applied only if it falls in the sanity table below; otherwise the old value stays. Then
+each variant gets the smallest `r` in 0.5…32 that passes (nominal damping ≥ 0.3 and stable with
++40 ms, up to `--vmax` 25 m/s). Results, plots and logs go to `~/mache_calib/drives/runs/<time>/`,
+the previous set to `backups/<time>/`, and `_history` in params.json. Use `--no-install` to preview
+and `--only-new` to ignore older drives (e.g. after a DBW firmware change). Read `steer_fit.png`.
+
+## Workflow (dedicated pad tests: more accurate, especially Cf/Cr)
 
 Work in a session directory, e.g. `CAL=~/mache_calib/$(date +%F)`; `S=~/autoware/.claude/skills/preview-gain-calibration/scripts`.
 Copy the template: `cp $S/mache.json $CAL/mache.json`. Source ROS first: `source ~/autoware/install/setup.bash`.
@@ -129,7 +158,7 @@ Look at `steer_fit.png` (Read it) — model must overlay the measurement. Sanity
 |---|---|---|
 | delay | 0.04–0.20 s | > 0.2 s exceeds the 5-slot buffer: report it; consider bridge timer/DDS latency |
 | τ | 0.03–0.25 s | check rate limit hits (big steps) — try `--fit-rate` |
-| K (tracking) | ~1.0 | ≠ 1 explains the `* 1.4` hack; raise with user (fix DBW vs keep 1/K) |
+| K (tracking) | ~1.0 | ≠ 1: the by-wire angle loop does not track; raise with user (fix DBW vs a documented 1/K) |
 | steering ratio | 13–18 | check yaw-rate sign/units, steady windows count |
 | Kus | 0.5–4 deg/g | negative → check data/sign; very large → tyre pressure / slip |
 | Cf, Cr (axle) | 80k–250k N/rad each | refit with more transient data |
@@ -151,14 +180,11 @@ mkdir -p ~/autoware/src/mcity/preview_control/data/gain/mache && cp -r $CAL/gain
 cp $CAL/mache.json ~/autoware/src/mcity/preview_control/data/gain/mache/params.json
 ```
 
-### Step 6 — integrate (propose each change to the user before editing)
-- A `mache_control.launch.py` (copy of `mkz_control.launch.py`) with
-  `gain_folder: .../data/gain/mache/withdelay/` (or `withoutdelay/`).
-- If using withdelay: `consider_delay_lag = true` (path_follow.hpp) — ideally make it a ROS parameter.
-- `STEERING_RATIO` → measured ratio; remove/replace the `* 1.4` in `publishCmd()` consistently with K.
-  These are MKZ-shared constants: make them per-vehicle (parameter) rather than overwriting.
-- Optional: WHEEL_DIAMETER in `mcity_bywire_node.py` from the speed scale.
-- Rebuild: `colcon build --packages-select preview_control`.
+### Step 6 — integrate (done 2026-10-20; nothing to do unless the code changes)
+`mache_control.launch.py` already loads `data/gain/mache/<gain_variant>/` with `consider_delay_lag`
+and `steering_ratio` from params.json, so installing new tables + params.json is enough.
+Optional: WHEEL_DIAMETER in `mcity_bywire_node.py` from the speed scale.
+Rebuild only after C++ changes: `colcon build --packages-select preview_control`.
 
 ### Step 7 — validation drive
 Progressive: 3 → 5 → 8 → 12 → 15 m/s on a known route, safety driver ready. Record the same topics
