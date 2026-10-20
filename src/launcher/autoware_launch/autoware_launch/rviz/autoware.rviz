@@ -768,7 +768,7 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: DetectedObjects
                   Namespaces:
-                    shape: true
+                    {}
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
                     Color: 255; 192; 203
@@ -870,8 +870,7 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: PredictedObjects
                   Namespaces:
-                    path: true
-                    shape: true
+                    {}
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
                     Color: 255; 192; 203
