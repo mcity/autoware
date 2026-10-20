@@ -8,7 +8,8 @@ void pathProcessing::init(
     double max_allowed_curvature_,
     double heading_offset_,
     int heading_lookahead_points_,
-    double lateral_offset_){
+    double lateral_offset_,
+    std::string slope_file_){
 
     _p2c = planning2control_msg;
     _vs = vehicle_state;
@@ -19,6 +20,41 @@ void pathProcessing::init(
     heading_offset = heading_offset_;
     heading_lookahead_points = heading_lookahead_points_;
     lateral_offset = lateral_offset_;
+
+    load_slope(slope_file_);
+}
+
+void pathProcessing::load_slope(std::string slope_file){
+    slope_map.clear();
+    if (slope_file.empty())
+        return;
+
+    std::ifstream fin(slope_file);
+    if (!fin.is_open()){
+        RCLCPP_WARN(rclcpp::get_logger("path_process"), "Open slope file failed: %s", slope_file.c_str());
+        return;
+    }
+
+    // each line: "(x, y): grade"
+    std::string line;
+    int x, y;
+    double grade;
+    while (std::getline(fin, line)){
+        if (sscanf(line.c_str(), " (%d , %d ) : %lf", &x, &y, &grade) == 3)
+            slope_map[std::make_pair(x, y)] = grade;
+    }
+    RCLCPP_INFO(rclcpp::get_logger("path_process"), "Loaded %zu slope points from %s", slope_map.size(), slope_file.c_str());
+}
+
+double pathProcessing::get_slope(){
+    if (slope_map.empty())
+        return 0.0;
+
+    auto it = slope_map.find(std::make_pair(int(std::round(_vs->pos_x)), int(std::round(_vs->pos_y))));
+    if (it == slope_map.end())
+        return 0.0;
+
+    return it->second;
 }
 
 void pathProcessing::run(){
@@ -28,6 +64,7 @@ void pathProcessing::run(){
     _p2c->vd = get_desired_velocity(closest_index);
     _p2c->ephi = get_orientation_error(closest_index);
     _p2c->ey = get_lateral_error(closest_index);
+    _p2c->slope = get_slope();
 
     RCLCPP_INFO(rclcpp::get_logger("path_process"), "remaining length %d", size);
     RCLCPP_INFO(rclcpp::get_logger("path_process"), "index %d", closest_index);
@@ -57,8 +94,52 @@ int pathProcessing::get_closest_index(){
         }
     }
 
-    // To account for the localization difference between mkz and autoware
-    return closest_index - 5;
+    // Look ~1 m behind the closest point to account for the localization difference
+    // between the vehicle reference point and autoware (was 5 points at 0.2 m spacing)
+    double back_dist = 0.0;
+    while (closest_index > 1 && back_dist < 1.0){
+        back_dist += std::hypot(_p2c->x_vector[closest_index] - _p2c->x_vector[closest_index - 1],
+                                _p2c->y_vector[closest_index] - _p2c->y_vector[closest_index - 1]);
+        closest_index--;
+    }
+
+    return closest_index;
+}
+
+void pathProcessing::process_path(double desired_time_resolution, double preview_time) {
+    // fall back to fixed 0.2 m spacing when the time-based parameters are not set
+    if (desired_time_resolution <= 0.0 || preview_time <= 0.0){
+        resampling();
+        return;
+    }
+
+    // keep one point every desired_time_resolution seconds of travel (at the desired
+    // speed, floored at 1.5 m/s), up to preview_time seconds ahead
+    std::vector<float> ds_x, ds_y, ds_vd, ds_ori;
+    size_t max_points = size_t(preview_time / desired_time_resolution);
+    double accumulated = 0.0;
+
+    for (size_t i = 0; i + 1 < _p2c->x_vector.size(); i++) {
+        double dist = std::hypot(_p2c->x_vector[i + 1] - _p2c->x_vector[i],
+                                 _p2c->y_vector[i + 1] - _p2c->y_vector[i]);
+        accumulated += dist / MAX(1.5, double(_p2c->vd_vector[i]));
+
+        if (accumulated >= desired_time_resolution) {
+            ds_x.push_back(_p2c->x_vector[i]);
+            ds_y.push_back(_p2c->y_vector[i]);
+            ds_vd.push_back(_p2c->vd_vector[i]);
+            ds_ori.push_back(_p2c->ori_vector[i]);
+            accumulated = 0.0;
+        }
+
+        if (ds_x.size() >= max_points)
+            break;
+    }
+
+    _p2c->x_vector = ds_x;
+    _p2c->y_vector = ds_y;
+    _p2c->vd_vector = ds_vd;
+    _p2c->ori_vector = ds_ori;
 }
 
 void pathProcessing::resampling() {

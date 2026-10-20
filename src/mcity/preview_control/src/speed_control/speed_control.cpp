@@ -28,7 +28,7 @@ void SpeedControl::get_padel_opening(float acc, float speed, float & throttle, f
         }
         else{
             throttle = 0.0f;
-            brake    = 0.23f;
+            brake    = 0.05f;
         }
 
         return;
@@ -58,8 +58,8 @@ void SpeedControl::get_padel_opening(float acc, float speed, float & throttle, f
     
     if (acc < accT[0])
     {
-        throttle = 0;
-        brake    = 0.23f;
+        throttle = 0.05f;
+        brake    = 0.05f;
     }
         
     else if (acc >= accT[TNUM-1])
@@ -140,7 +140,7 @@ void SpeedControl::ini(
 
     SC.vd  = 0.0f;
     SC.throttle_cmd = 0.0f;
-    SC.brake_cmd    = 0.25f;
+    SC.brake_cmd    = 0.05f;
     SC.acc_cmd      = -3.0f;
     SC.errIntg       = 0.0f;
     SC.acc_max_barr  = -3.0f;
@@ -178,7 +178,7 @@ int SpeedControl::run()
     if (_vs->gear_position != GEAR_DRIVE && SC.vd > 0.1) //target speed > 0.1
     {
         SC.errIntg      = 0.0f;
-		SC.brake_cmd    = 0.2f;
+		SC.brake_cmd    = 0.0f;
 		SC.throttle_cmd = 0.0f;
         SC.gear_cmd     = GEAR_DRIVE;
     }
@@ -206,10 +206,10 @@ int SpeedControl::run()
     if (SC.speed_x < 0.3 && SC.vd < 2.0 && SC.brake_cmd > 0.1f )
     {
         if (SC.vd < SC.speed_x)
-            SC.brake_cmd = MAX(0.22f, 0.22f - SLOPE2PADEL);
+            SC.brake_cmd = MAX(0.05f, 0.05f - SLOPE2PADEL);
 
         if (SC.vd == 0)
-            SC.brake_cmd = 0.22f + ABS(SLOPE2PADEL);
+            SC.brake_cmd = 0.05f + ABS(SLOPE2PADEL);
     }
  
     // ********************** OUTPUT *******************
@@ -292,30 +292,30 @@ void SpeedControl::set_stop()
 
 void SpeedControl::setestop_level_high()
 {
-    float throttle = 0, brake =0.25; 
+    float throttle = 0, brake =0.05; 
     get_padel_opening(-3.0, _vs->speed_x, throttle, brake);
    
     if (_vs->speed_x < 0.5)
         brake = 0.235f;
 
-    _ctrl->brake = MAX(brake,0.25f);
+    _ctrl->brake = MAX(brake,0.05f);
     _ctrl->throttle = 0.0f;
 }
 
 void SpeedControl::setestop_level_medium()
 {
-    _ctrl->brake = MAX(0.245f, 0.245f - SLOPE2PADEL);
+    _ctrl->brake = MAX(0.05f, 0.05f - SLOPE2PADEL);
     _ctrl->throttle = 0.0f;
 }
 
 void SpeedControl::setestop_level_low()
 {
     if ( _vs->speed_x >= 2.0 )
-        _ctrl->brake = MAX(0.22f, 0.22f - SLOPE2PADEL);
+        _ctrl->brake = MAX(0.05f, 0.05f - SLOPE2PADEL);
     else
-        _ctrl->brake = MAX(0.22f, 0.22f - SLOPE2PADEL);
+        _ctrl->brake = MAX(0.05f, 0.05f - SLOPE2PADEL);
 
     _ctrl->throttle = 0.0f;
     if (_vs->speed_x < 0.2)
-        _ctrl->brake = 0.22f + ABS(SLOPE2PADEL);
+        _ctrl->brake = 0.05f + ABS(SLOPE2PADEL);
 }

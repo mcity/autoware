@@ -61,7 +61,9 @@ public:
         Control_Value_S * const control_output,
         std::string gain_folder,
         float max_allowed_ey_,
-        float max_allowed_ephi_
+        float max_allowed_ephi_,
+        float steering_ratio_,
+        bool consider_delay_lag_
     );
 
     int run();
@@ -79,7 +81,8 @@ private:
     long count = 0;
     float max_allowed_ey;
     float max_allowed_ephi;
-    bool consider_delay_lag = false;
+    float steering_ratio = 16.0f;    // steering wheel / front wheel angle
+    bool consider_delay_lag = false; // true: use withdelay gains (delay buffer + measured steering feedback)
 };
 
 #endif // PATHFOLLOWING_HPP

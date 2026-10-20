@@ -30,11 +30,13 @@ public:
         double max_allowed_curvature_,
         double heading_offset_,
         int heading_lookahead_points_,
-        double lateral_offset_
+        double lateral_offset_,
+        std::string slope_file_
     );
 
     void run();
     void resampling();
+    void process_path(double desired_time_resolution, double preview_time);
 
 
 private:
@@ -44,6 +46,8 @@ private:
     double get_desired_velocity(int closest_index);
     double get_orientation_error(int closest_index);
     double get_lateral_error(int closest_index);
+    void load_slope(std::string slope_file);
+    double get_slope();
 
     Plan_Rlt_S * _p2c  = NULL;
     VehState_S * _vs   = NULL;
@@ -55,6 +59,7 @@ private:
     int heading_lookahead_points;
     int values;
     double lateral_offset;
+    std::map<std::pair<int, int>, double> slope_map; // (x, y) [m] -> road grade [rad]
 };
 
 #endif // PATHFOLLOWING_HPP

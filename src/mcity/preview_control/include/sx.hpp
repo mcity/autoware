@@ -30,7 +30,6 @@
 #define RELATIVE_LONGITUDE      (-1.460877)
 #define RELATIVE_LATITUDE       (0.73824)
 
-#define STEERING_RATIO          (16.0f)
 #define WHEEL_DIAMETER          (0.673f)
 #define VEHICLE_WEIGHT          (1800.0f)   //kg
 #define L_WHEELS                (2.85f)     //m
@@ -170,7 +169,7 @@ class Control_Value_S
 public:
     double timestamp    = 0;
 
-    float brake         = 0.25;
+    float brake         = 0.05;
     float throttle      = 0.0;
     float steering      = 0.0;
     int   gear          = GEAR_NONE;
@@ -178,7 +177,7 @@ public:
 
     void ini()
     {
-        brake    = 0.25;
+        brake    = 0.05;
         throttle = 0.0;
     }
 };

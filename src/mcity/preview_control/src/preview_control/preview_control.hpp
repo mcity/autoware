@@ -74,6 +74,8 @@ private:
     double lateral_offset           = 0.0;
     double preview_time             = 0.0;
     double desired_time_resolution  = 0.0;
+    double steering_ratio           = 16.0;
+    bool   consider_delay_lag       = false;
 
     // GUI_Set_S guiSet;
     pathProcessing pathProcess;

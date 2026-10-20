@@ -15,7 +15,7 @@ def generate_launch_description():
                         "gain_folder": PathJoinSubstitution(
                             [
                                 EnvironmentVariable("HOME"),
-                                "autoware/src/mcity/preview_control/data/gain/withoutdelay/",
+                                "autoware/src/mcity/preview_control/data/gain/mkz/withoutdelay/",
                             ]
                         )
                     },

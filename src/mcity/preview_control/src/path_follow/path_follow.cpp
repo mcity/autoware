@@ -6,7 +6,9 @@ void PathFollowing::init(
     Control_Value_S * const control_output,
     std::string gain_folder,
     float max_allowed_ey_,
-    float max_allowed_ephi_)
+    float max_allowed_ephi_,
+    float steering_ratio_,
+    bool consider_delay_lag_)
 {
     _p2c = planning2control_msg;
     _vs = vehicle_state;
@@ -14,6 +16,8 @@ void PathFollowing::init(
 
     max_allowed_ey = max_allowed_ey_;
     max_allowed_ephi = max_allowed_ephi_;
+    steering_ratio = steering_ratio_;
+    consider_delay_lag = consider_delay_lag_;
 
     loadGains(gain_folder);
 }
@@ -46,7 +50,7 @@ int PathFollowing::run()
     //step 1: preview
     PVC.wheelAngle = preview();
     PVC.steeringAngle = MAX( MIN_STEERING_ANGLE, 
-                        MIN( MAX_STEERING_ANGLE, PVC.wheelAngle * STEERING_RATIO));
+                        MIN( MAX_STEERING_ANGLE, PVC.wheelAngle * steering_ratio));
 
     // step 2: OUTPUT
     if (_vs->speed_x > 0.001f)
@@ -63,7 +67,7 @@ int PathFollowing::run()
         if (_vs->speed_x < 1 || _vs->by_wire_enabled != true)
             PVC.delayedCmd[4] = 0;
         else
-            PVC.delayedCmd[4] = _ctrl->steering / STEERING_RATIO; //delayed 1st step
+            PVC.delayedCmd[4] = _ctrl->steering / steering_ratio; //delayed 1st step
     }
 
     return 0;
@@ -89,7 +93,7 @@ float PathFollowing::preview()
     // PVC.hERate  = _vs->yawRate - _vs->speed_x * _p2c->cr;
     PVC.hERate  = 0.0;
     
-    PVC.steerAglReal = _vs->steering_wheel_angle / STEERING_RATIO;
+    PVC.steerAglReal = _vs->steering_wheel_angle / steering_ratio;
 
     //step 2: Feedback Design
     PVC.dEGain              = kfb[vN+0][2]*(1-beta) + kfb[vN+1][2]*beta;
