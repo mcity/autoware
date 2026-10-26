@@ -37,10 +37,19 @@ def launch_setup(context):
                 {"max_ey": 1.5},
                 {"max_ephi": 1.0},
                 {"max_curvature": 0.2},
-                {"speed_ctrl_kp": 1.8},
-                {"speed_ctrl_ki": 0.6},
-                # -0.03 was the MKZ antenna/CoM heading bias; 0.0 matches stanley_control on the MachE
-                {"heading_offset": 0.0},
+                # speed: cap the planned speed, gentle PI, coast (regen) before braking, pedal rise limits
+                {"max_speed": 6.0},             # m/s (~13 mph); route plans up to 8.33
+                {"speed_ctrl_kp": 1.0},         # was 1.8 (MKZ)
+                {"speed_ctrl_ki": 0.3},         # was 0.6
+                {"coast_band": 0.6},            # m/s^2 of decel handled by lift-off before any brake
+                {"throttle_rate": 0.3},         # 1/s max throttle rise
+                {"brake_rate": 0.5},            # 1/s max brake rise (estop not limited)
+                # MachE brake cmd 0..1 = 0..100 %: brake = brake_gain * decel [m/s^2] (MKZ table started at 18 %)
+                {"brake_gain": 0.05},
+                # steering: max steering-wheel rate, rad/s (~170 deg/s); 0 = off
+                {"steer_rate_limit": 3.0},
+                # pose heading bias: first MachE drive showed a steady -0.035 rad ephi on straights
+                {"heading_offset": -0.03},
                 {"heading_lookahead_points": 10},
                 {"lateral_offset": 0.0},
                 # path resampled every 0.04 s of travel = the gain tables' time step

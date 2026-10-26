@@ -83,7 +83,12 @@ void SpeedControl::get_padel_opening(float acc, float speed, float & throttle, f
     if (acc < accT[0]) // need more brake, i.e., coast is not enough
     {        
         throttle = 0.0f;
-        brake  = cal_brake_pedal_opening(accT[0]-acc);
+        if (accT[0] - acc < coast_band)
+            brake = 0.0f;   // lift off, regen slows the car
+        else if (brake_gain > 0)   // MachE: brake 0..1 = 0..100 % (linear in decel)
+            brake = brake_gain * (accT[0] - acc - coast_band);
+        else                       // MKZ pedal table (min opening 0.184)
+            brake = cal_brake_pedal_opening(accT[0] - acc - coast_band);
     }
 
     if (brake > 0)
@@ -146,6 +151,16 @@ void SpeedControl::ini(
     SC.acc_max_barr  = -3.0f;
 }
 
+void SpeedControl::set_smoothing(float max_speed_, float coast_band_, float throttle_rate_, float brake_rate_,
+                                 float brake_gain_)
+{
+    brake_gain    = MAX(0.0f, brake_gain_);
+    max_speed     = max_speed_ > 0 ? MIN(max_speed_, MAX_SPEED) : MAX_SPEED;
+    coast_band    = MAX(0.0f, coast_band_);
+    throttle_rate = MAX(0.0f, throttle_rate_);
+    brake_rate    = MAX(0.0f, brake_rate_);
+}
+
 int SpeedControl::run()
 {
     if (_p2c == NULL || _vs == NULL || _ctrl == NULL ){
@@ -155,7 +170,7 @@ int SpeedControl::run()
     count ++;
 
     // *************** step 0: INPUT, Assignment *****************
-    SC.vd       = _p2c->vd;
+    SC.vd       = MIN(_p2c->vd, max_speed);
     SC.speed_x  = MAX(0.0, _vs->speed_x);
 
     // ************************************************************
@@ -218,6 +233,14 @@ int SpeedControl::run()
 
     if (SC.brake_cmd > 0.0f) SC.throttle_cmd = 0.0f;
     if (SC.throttle_cmd> 0.01f) SC.brake_cmd = 0.0f;
+
+    // limit how fast throttle / brake rise (releasing is immediate); estop below is not limited
+    if (throttle_rate > 0 && SC.throttle_cmd > throttle_out)
+        SC.throttle_cmd = MIN(SC.throttle_cmd, throttle_out + throttle_rate / frequence);
+    if (brake_rate > 0 && SC.brake_cmd > brake_out)
+        SC.brake_cmd = MIN(SC.brake_cmd, brake_out + brake_rate / frequence);
+    throttle_out = SC.throttle_cmd;
+    brake_out    = SC.brake_cmd;
 
     _ctrl->brake         = SC.brake_cmd;
     _ctrl->throttle      = SC.throttle_cmd;

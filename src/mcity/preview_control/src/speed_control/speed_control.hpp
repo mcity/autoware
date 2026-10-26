@@ -92,6 +92,8 @@ public:
         float pid_ki_,
         int frequence_);
 
+    void set_smoothing(float max_speed_, float coast_band_, float throttle_rate_, float brake_rate_,
+                       float brake_gain_);
     int  run();
     void set_stop();
     void setestop_level_high();
@@ -107,6 +109,13 @@ private:
     float cal_road_load(float vehicle_speed);
 
     float brake_prev = 0;
+    float max_speed     = MAX_SPEED; // cap on the planned speed [m/s]
+    float coast_band    = 0.0f;      // decel [m/s^2] below coasting handled by lift-off (regen), no brake
+    float throttle_rate = 0.0f;      // max throttle rise [1/s], 0 = no limit
+    float brake_rate    = 0.0f;      // max brake rise [1/s], 0 = no limit
+    float brake_gain    = 0.0f;      // brake per m/s^2 of decel (0..1 cmd); 0 = MKZ BRAKETABLE
+    float throttle_out  = 0.0f;
+    float brake_out     = 0.0f;
 
     Plan_Rlt_S * _p2c  = NULL;
     VehState_S * _vs   = NULL;

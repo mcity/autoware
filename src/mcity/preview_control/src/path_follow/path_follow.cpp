@@ -52,6 +52,13 @@ int PathFollowing::run()
     PVC.steeringAngle = MAX( MIN_STEERING_ANGLE, 
                         MIN( MAX_STEERING_ANGLE, PVC.wheelAngle * steering_ratio));
 
+    // rate limit relative to the last command (50 Hz)
+    if (steer_rate_limit > 0)
+    {
+        float step = steer_rate_limit / 50.0f;
+        PVC.steeringAngle = MAX(_ctrl->steering - step, MIN(_ctrl->steering + step, PVC.steeringAngle));
+    }
+
     // step 2: OUTPUT
     if (_vs->speed_x > 0.001f)
         _ctrl->steering = PVC.steeringAngle;

@@ -9,8 +9,15 @@ gain tables only; the MKZ tables are kept just for CARLA.
   - `consider_delay_lag` = true for withdelay (delay buffer + measured-steering feedback), false for withoutdelay
   - `steering_ratio` is read from `data/gain/mache/params.json` (stays in sync with the tables)
   - `preview_time` 5.0 s, `desired_time_resolution` 0.04 s (= the gain tables' time step)
-  - `heading_offset` 0.0 (as stanley_control on the MachE). The MKZ's -0.03 rad caused a constant ~10 deg
-    left steering bias on the bench
+  - `heading_offset` -0.03: the pose heading is biased. The 2026-10-26 drive showed a steady -0.035 rad ephi
+    with a constant 0.6 m ey on straights. A bench test with a perfect fake pose shows a ~10 deg bias from it: expected
+  - Smoothing (2026-10-26, after "brakes constantly / steering aggressive" on the 2nd drive):
+    `max_speed` 6.0 caps the planned speed. Speed PI `kp` 1.0 / `ki` 0.3 (MKZ: 1.8 / 0.6).
+    `coast_band` 0.6 m/s^2: lift off (regen) before braking. `throttle_rate` 0.3/s and `brake_rate` 0.5/s
+    cap pedal rise. `steer_rate_limit` 3.0 rad/s. All of these default to 0 = off in the node.
+  - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
+    `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
+    and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.
   - `slope_file` empty = flat road (slope 0). A slope map also changes speed control (gravity comp + pedal offsets)
 - CARLA: `carla_control.launch.py` -> `data/gain/mkz/withoutdelay/` (MKZ tables, unchanged behaviour)
 
@@ -31,8 +38,10 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
 ## Gain tables
 - `data/gain/mache/{withdelay,withoutdelay}/{Feedback,Feedforward}_dynamic.txt` + `params.json`
   (vehicle params, LQR weights, `_measured`, `_history`). Generated, never hand-edited.
-- Current set (2026-10-20) is PROVISIONAL: template values (mass 2300, ratio 16, Cf=Cr=150k, tau 0.15,
-  delay 0.2), r = 16 withoutdelay / 4 withdelay. Replace by driving + `update_from_drive.py`.
+- Current set is PROVISIONAL: template vehicle values (mass 2300, ratio 16, Cf=Cr=150k, tau 0.15, delay 0.2).
+  2026-10-26 retune after the first drive (ey drifted to 1.6 m -> path-departure stops): withdelay r=1 and
+  q_ey x4 (k_ey ~ the old MKZ x1.4 setup). Eased to q_ey x2 after the 2nd drive (steering too aggressive). Damping >= 0.33 up to 15 m/s, thin above (not for highway
+  speed yet). withoutdelay r=32. `update_from_drive.py --vmax` defaults to 15 m/s.
 - Regenerate / calibrate with the skill in `~/autoware/.claude/skills/preview-gain-calibration/` (SKILL.md):
   ```bash
   S=~/autoware/.claude/skills/preview-gain-calibration/scripts; source ~/autoware/install/setup.bash

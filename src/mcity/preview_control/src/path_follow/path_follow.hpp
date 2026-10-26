@@ -67,6 +67,7 @@ public:
     );
 
     int run();
+    void set_steer_rate_limit(float rate) { steer_rate_limit = rate; }
 
 private:
     float preview();
@@ -82,7 +83,8 @@ private:
     float max_allowed_ey;
     float max_allowed_ephi;
     float steering_ratio = 16.0f;    // steering wheel / front wheel angle
-    bool consider_delay_lag = false; // true: use withdelay gains (delay buffer + measured steering feedback)
+    bool consider_delay_lag = false;
+    float steer_rate_limit = 0.0f;   // max steering-wheel rate [rad/s], 0 = no limit // true: use withdelay gains (delay buffer + measured steering feedback)
 };
 
 #endif // PATHFOLLOWING_HPP

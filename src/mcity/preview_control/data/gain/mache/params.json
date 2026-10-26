@@ -1,6 +1,6 @@
 {
   "name": "Ford Mustang Mach-E (Mcity) - PROVISIONAL (template/spec values, not measured)",
-  "_notes": "mass/lf/lr/Iz: from scale or spec sheet (Step 0). tau/delay: fit_steering.py. steering_ratio/Cf/Cr: fit_vehicle.py. weights copied from mkz.json so the MachE tables keep the MKZ tuning feel. 2026-10-20: PROVISIONAL tables generated from template values (no system-ID drives yet). r de-tuned: withoutdelay 16 (stable to ~25 m/s with 0.2 s delay), withdelay 4 (damping >=0.33 to 30 m/s). Regenerate after Tests 1-3.",
+  "_notes": "mass/lf/lr/Iz: from scale or spec sheet (Step 0). tau/delay: fit_steering.py. steering_ratio/Cf/Cr: fit_vehicle.py. weights copied from mkz.json so the MachE tables keep the MKZ tuning feel. 2026-10-20: PROVISIONAL tables generated from template values (no system-ID drives yet). r de-tuned: withoutdelay 16 (stable to ~25 m/s with 0.2 s delay), withdelay 4 (damping >=0.33 to 30 m/s). Regenerate after Tests 1-3. 2026-10-26: first car test (highway route, <=8.3 m/s): lateral correction too weak (ey drifted to +1.6 m -> path-departure stop) and a steady -0.035 rad heading bias. withdelay retuned to r=1, q_ey x4 (k_ey ~ the old MKZ x1.4 setup; damping >=0.33 up to 15 m/s, thin above), heading_offset back to -0.03. 2026-10-26 (2nd drive): lateral good (|ey|~0.05 m on straights) but steering felt aggressive -> q_ey x2 (from x4), plus steer_rate_limit in the launch.",
   "mass": 2300.0,
   "Iz": 4900.0,
   "lf": 1.45,
@@ -12,7 +12,7 @@
   "dt": 0.04,
   "steering_ratio": 16.0,
   "weights": {
-    "r": 16.0,
+    "r": 32.0,
     "speed_exp": {
       "q_ey": -1.3631,
       "q_eydot": -0.673,
@@ -26,17 +26,52 @@
     "q_delta": 0.0
   },
   "weights_withdelay": {
-    "r": 4.0,
+    "r": 1.0,
     "speed_exp": {
       "q_ey": -1.4854,
       "q_eydot": -0.1828,
       "q_ephi": -4.0,
       "q_ephidot": -4.0
     },
-    "q_ey": 0.00193516,
+    "q_ey": 0.00387032,
     "q_eydot": 0.000185357,
     "q_ephi": 0.00689934,
     "q_ephidot": 0.000132393,
     "q_delta": 5.93185e-10
-  }
+  },
+  "_history": [
+    {
+      "time": "2026-10-26_120855",
+      "drives": [
+        "preview_test1"
+      ],
+      "accepted": [],
+      "values": {
+        "tau": 0.15,
+        "delay": 0.2,
+        "steering_ratio": 16.0,
+        "Cf": 150000.0,
+        "Cr": 150000.0
+      },
+      "r": {
+        "withoutdelay": 32.0,
+        "withdelay": 2.0
+      }
+    },
+    {
+      "time": "2026-10-26",
+      "change": "withdelay r 4->1, q_ey x4 after first car test",
+      "values": {
+        "tau": 0.15,
+        "delay": 0.2,
+        "steering_ratio": 16.0,
+        "Cf": 150000.0,
+        "Cr": 150000.0
+      }
+    },
+    {
+      "time": "2026-10-26",
+      "change": "withdelay q_ey x4 -> x2 (smoother steering) after 2nd drive"
+    }
+  ]
 }

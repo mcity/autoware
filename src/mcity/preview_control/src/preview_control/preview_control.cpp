@@ -19,6 +19,12 @@ namespace preview_control
         this->declare_parameter("desired_time_resolution", 0.0);
         this->declare_parameter("steering_ratio", 16.0);
         this->declare_parameter("consider_delay_lag", false);
+        this->declare_parameter("steer_rate_limit", 0.0);
+        this->declare_parameter("max_speed", 0.0);
+        this->declare_parameter("coast_band", 0.0);
+        this->declare_parameter("throttle_rate", 0.0);
+        this->declare_parameter("brake_rate", 0.0);
+        this->declare_parameter("brake_gain", 0.0);
         this->declare_parameter("trajectory_abort_size", 0);
         this->declare_parameter("trajectory_loose_abort_size", 0);
 
@@ -36,6 +42,12 @@ namespace preview_control
         this->get_parameter("desired_time_resolution", desired_time_resolution);
         this->get_parameter("steering_ratio", steering_ratio);
         this->get_parameter("consider_delay_lag", consider_delay_lag);
+        this->get_parameter("steer_rate_limit", steer_rate_limit);
+        this->get_parameter("max_speed", max_speed);
+        this->get_parameter("coast_band", coast_band);
+        this->get_parameter("throttle_rate", throttle_rate);
+        this->get_parameter("brake_rate", brake_rate);
+        this->get_parameter("brake_gain", brake_gain);
         this->get_parameter("trajectory_abort_size", trajectory_abort_size);
         this->get_parameter("trajectory_loose_abort_size", trajectory_loose_abort_size);
 
@@ -75,7 +87,9 @@ namespace preview_control
             slope_folder);
 
         pathFollow.init(_p2c, _vs, _ctrl, gain_folder, max_ey, max_ephi, steering_ratio, consider_delay_lag);
+        pathFollow.set_steer_rate_limit(steer_rate_limit);
         speedCtrl.ini(_p2c, _vs, _ctrl, speed_ctrl_kp, speed_ctrl_ki, FREQ);
+        speedCtrl.set_smoothing(max_speed, coast_band, throttle_rate, brake_rate, brake_gain);
     }
 
     void PreviewControl::publishCmd()
