@@ -11,7 +11,7 @@
 3. accepts each fitted group only if it is inside the plausible range (SKILL.md table),
    otherwise keeps the current value
 4. per variant, picks the smallest r in R_LADDER whose gains pass the stability check
-   (nominal damping >= 0.3 and stable with +40 ms delay, all speeds <= --vmax)
+   (nominal damping >= 0.3 and stable with +40 ms delay, all speeds <= --vmax, default 15 m/s)
 5. writes data/gain/mache/{withdelay,withoutdelay,params.json}; the old set is backed up
    to <store>/backups/<timestamp>/. preview_control loads gains at start-up: relaunch it.
 
@@ -100,7 +100,9 @@ def main():
     ap.add_argument("bags", nargs="*", help="new bag dirs (already-exported ones are skipped)")
     ap.add_argument("--store", default=os.environ.get("MACHE_CALIB_STORE", "~/mache_calib/drives"))
     ap.add_argument("--only-new", action="store_true", help="fit only the given bags, not the whole store")
-    ap.add_argument("--vmax", type=float, default=25.0, help="highest speed the stability check must pass [m/s]")
+    ap.add_argument("--vmax", type=float, default=15.0,
+                    help="highest speed the stability check must pass [m/s]; raise with the test speed "
+                         "(25 forces much softer lateral gains)")
     ap.add_argument("--no-install", action="store_true", help="write results to the store only")
     a = ap.parse_args()
 
@@ -114,11 +116,14 @@ def main():
     new = []
     for b in a.bags:
         d = os.path.join(store, "csv", os.path.basename(os.path.normpath(b)))
-        if not os.path.isdir(d) and not run([sys.executable, f"{HERE}/bag_to_csv.py", b, "--out", d], log):
+        if not os.path.isdir(b):
+            raise SystemExit(f"no such bag: {b} (was record_drive.sh running?)")
+        if not os.path.exists(os.path.join(d, "__mcity__vehicle_state.csv")) and not run([sys.executable, f"{HERE}/bag_to_csv.py", b, "--out", d], log):
             raise SystemExit(f"bag export failed for {b} (is the workspace sourced?)")
         new.append(d)
     csv_root = os.path.join(store, "csv")
-    csvs = new if a.only_new else sorted(os.path.join(csv_root, x) for x in os.listdir(csv_root))
+    csvs = new if a.only_new else sorted(os.path.join(csv_root, x) for x in os.listdir(csv_root)
+                                         if os.path.exists(os.path.join(csv_root, x, "__mcity__vehicle_state.csv")))
     if not csvs:
         raise SystemExit("no drives to fit")
     print(f"fitting on {len(csvs)} drive(s)")

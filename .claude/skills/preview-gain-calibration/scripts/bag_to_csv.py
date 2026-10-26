@@ -88,11 +88,10 @@ def main():
     ap.add_argument("--topics", nargs="*", default=DEFAULT_TOPICS, help="topics to export ('all' for every topic)")
     args = ap.parse_args()
     out_dir = args.out or args.bag.rstrip("/") + "_csv"
-    os.makedirs(out_dir, exist_ok=True)
-
     reader = rosbag2_py.SequentialReader()
     reader.open(rosbag2_py.StorageOptions(uri=args.bag, storage_id=""),
                 rosbag2_py.ConverterOptions("cdr", "cdr"))
+    os.makedirs(out_dir, exist_ok=True)   # only after the bag opened: no empty dirs from failed exports
     types = {t.name: t.type for t in reader.get_all_topics_and_types()}
     wanted = set(types) if args.topics == ["all"] else set(args.topics) & set(types)
     missing = set() if args.topics == ["all"] else set(args.topics) - set(types)
