@@ -25,7 +25,7 @@ gain tables only; the MKZ tables are kept just for CARLA.
 `/mcity/vehicle_planning` + `/mcity/cav_pose` + `/mcity/vehicle_state` -> **preview_control**
 -> `/mcity/preview_control/vehicle_control` -> relay `ros2 run mcity_vigrade mcity_preview_control`
 (~/mcity_demos; forwards only when the redis control-override FLAG is "False")
--> `/mcity/vehicle_control` -> `mcity_bywire_node.py` (~/mcity_mache_bywire) -> Dataspeed DBW.
+-> `/mcity/vehicle_control` -> `mcity_mache_bywire` (src/mcity/mcity_mache_bywire) -> Dataspeed DBW.
 stanley_control and pursuit_control publish to the same `/mcity/preview_control/vehicle_control`
 topic: run only one controller at a time.
 
