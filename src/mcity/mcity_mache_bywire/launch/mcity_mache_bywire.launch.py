@@ -10,7 +10,7 @@ def generate_launch_description():
             name='mcity_mache_bywire',
             parameters=[
                 {'max_speed': 20.0},
-                {'max_throttle': 0.7},
+                {'max_throttle': 1.0},
                 {'max_lat_acc': 2.5},
             ],
         ),
