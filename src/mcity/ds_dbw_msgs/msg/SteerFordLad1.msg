@@ -1,0 +1,32 @@
+std_msgs/Header header
+
+uint8 ldw_intensity
+uint8 LDW_INTENSITY_NONE = 0
+uint8 LDW_INTENSITY_LOW = 1
+uint8 LDW_INTENSITY_MEDIUM = 2
+uint8 LDW_INTENSITY_HIGH = 3
+
+uint8 ldw_status
+uint8 LDW_STATUS_NONE = 0
+uint8 LDW_STATUS_DEMO = 1
+uint8 LDW_STATUS_WARN_LEFT = 2
+uint8 LDW_STATUS_SUPPRESS_LEFT = 3
+uint8 LDW_STATUS_WARN_RIGHT = 4
+uint8 LDW_STATUS_SUPPRESS_RIGHT = 5
+uint8 LDW_STATUS_SUPPRESS_BOTH = 7
+
+uint8 lka_status
+uint8 LKA_STATUS_NONE = 0
+uint8 LKA_STATUS_LEFT_INCREMENTAL = 1
+uint8 LKA_STATUS_LEFT_STANDARD = 2
+uint8 LKA_STATUS_LEFT_SUPPRESS = 3
+uint8 LKA_STATUS_RIGHT_STANDARD = 4
+uint8 LKA_STATUS_RIGHT_SUPPRESS = 5
+uint8 LKA_STATUS_RIGHT_INCREMENTAL = 6
+
+uint8 lka_ramp
+uint8 RAMP_SMOOTH = 0
+uint8 RAMP_QUICK = 1
+
+float32 curvature       # 1/m
+float32 reference_angle # milliradian
