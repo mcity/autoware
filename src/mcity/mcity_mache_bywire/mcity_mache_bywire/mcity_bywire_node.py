@@ -224,7 +224,7 @@ class McityBywire(Node):
         if self.vs_msg.speed_x > self.max_speed + 0.2:
             self.get_logger().warn(
                 f'Violate rule 4: speed {self.vs_msg.speed_x:.4f} > {self.max_speed:.4f} m/s, throttle zeroed')
-            self.cmd_throttle = 15.0
+            self.cmd_throttle = 0.0
 
         # Rule 5: No gear shift while moving
         if (self.vs_msg.speed_x > 0 and
@@ -238,7 +238,7 @@ class McityBywire(Node):
         if abs(self.vs_msg.acc_y) > self.max_lat_acc:
             self.get_logger().warn(
                 f'Violate rule 6: a_y {self.vs_msg.acc_y:.4f} > {self.max_lat_acc:.4f} m/s², throttle zeroed')
-            self.cmd_throttle = 15.0
+            self.cmd_throttle = 0.0
 
         # Final: disable throttle whenever brake is applied
         if self.cmd_brake > 0.0:
