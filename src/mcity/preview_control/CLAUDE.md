@@ -18,6 +18,10 @@ gain tables only; the MKZ tables are kept just for CARLA.
   - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
     `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
     and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.
+  - Curve speed limit (2026-11-05): `curve_lat_acc` 1.0 m/s^2 caps vd at sqrt(a/curvature) (12 m radius
+    -> 3.5 m/s), `curve_decel` 0.8 m/s^2 ramps down before the turn, `curve_min_speed` 2.5 m/s floor.
+    Curvature is from path x/y (heading change over +-2 m), in `compute_curve_speed()`; the cap is applied
+    last in `get_desired_velocity()`. `curve_lat_acc` 0 = off. Nov 2 drives took turns at up to 1.8 m/s^2.
   - `slope_file` empty = flat road (slope 0). A slope map also changes speed control (gravity comp + pedal offsets)
 - CARLA: `carla_control.launch.py` -> `data/gain/mkz/withoutdelay/` (MKZ tables, unchanged behaviour)
 

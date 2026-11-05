@@ -82,6 +82,9 @@ private:
     double throttle_rate            = 0.0;
     double brake_rate               = 0.0;
     double brake_gain               = 0.0;
+    double curve_lat_acc            = 0.0;
+    double curve_decel              = 1.0;
+    double curve_min_speed          = 0.0;
 
     // GUI_Set_S guiSet;
     pathProcessing pathProcess;

@@ -140,6 +140,51 @@ void pathProcessing::process_path(double desired_time_resolution, double preview
     _p2c->y_vector = ds_y;
     _p2c->vd_vector = ds_vd;
     _p2c->ori_vector = ds_ori;
+
+    compute_curve_speed();
+}
+
+void pathProcessing::set_curve_speed(double lat_acc_, double decel_, double min_speed_){
+    curve_lat_acc   = lat_acc_;
+    curve_decel     = decel_ > 0 ? decel_ : 1.0;
+    curve_min_speed = min_speed_;
+}
+
+void pathProcessing::compute_curve_speed(){
+    curve_vmax.clear();
+    size_t n = _p2c->x_vector.size();
+    if (curve_lat_acc <= 0.0 || n < 3)
+        return;
+
+    // arc length along the path
+    std::vector<double> s(n, 0.0);
+    for (size_t i = 1; i < n; i++)
+        s[i] = s[i - 1] + std::hypot(_p2c->x_vector[i] - _p2c->x_vector[i - 1],
+                                     _p2c->y_vector[i] - _p2c->y_vector[i - 1]);
+
+    // curvature from the heading change of the chords ~2 m behind and ahead of each point
+    // (x/y based, so it does not depend on the planner's ori_vector; the wide window rejects jitter)
+    const double half_window = 2.0;
+    curve_vmax.assign(n, std::numeric_limits<double>::max());
+    size_t k = 0, j = 0;
+    for (size_t i = 0; i < n; i++){
+        while (k < i && s[i] - s[k + 1] >= half_window) k++;
+        if (j < i) j = i;
+        while (j + 1 < n && s[j] - s[i] < half_window) j++;
+        if (k == i || j == i || s[i] - s[k] < 0.5 || s[j] - s[i] < 0.5)
+            continue;
+
+        double h_back = std::atan2(_p2c->y_vector[i] - _p2c->y_vector[k], _p2c->x_vector[i] - _p2c->x_vector[k]);
+        double h_fwd  = std::atan2(_p2c->y_vector[j] - _p2c->y_vector[i], _p2c->x_vector[j] - _p2c->x_vector[i]);
+        double dh = std::remainder(h_fwd - h_back, 2 * M_PI);
+        double curvature = std::fabs(dh) / (0.5 * (s[j] - s[k]));
+        if (curvature > 1e-4)
+            curve_vmax[i] = MAX(curve_min_speed, std::sqrt(curve_lat_acc / curvature));
+    }
+
+    // slow down before the curve: v_i^2 <= v_{i+1}^2 + 2 * decel * ds
+    for (size_t i = n - 1; i-- > 0;)
+        curve_vmax[i] = MIN(curve_vmax[i], std::sqrt(curve_vmax[i + 1] * curve_vmax[i + 1] + 2 * curve_decel * (s[i + 1] - s[i])));
 }
 
 void pathProcessing::resampling() {
@@ -212,6 +257,8 @@ void pathProcessing::resampling() {
     _p2c->y_vector = resampled_y;
     _p2c->vd_vector = resampled_vd;
     _p2c->ori_vector = resampled_ori;
+
+    compute_curve_speed();
 }
 
 double pathProcessing::get_desired_velocity(int closest_index){
@@ -235,6 +282,12 @@ double pathProcessing::get_desired_velocity(int closest_index){
                 desired_velocity = _p2c->vd_vector[i];
             }
         }
+    }
+
+    // curve limit last: the search above may pick a faster point beyond the curve
+    if (size_t(closest_index) < curve_vmax.size() && curve_vmax[closest_index] < desired_velocity){
+        RCLCPP_INFO(rclcpp::get_logger("path_process"), "curve limit %f (planned %f)", curve_vmax[closest_index], desired_velocity);
+        desired_velocity = curve_vmax[closest_index];
     }
 
     return desired_velocity;

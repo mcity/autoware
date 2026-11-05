@@ -46,6 +46,11 @@ def launch_setup(context):
                 {"brake_rate": 0.5},            # 1/s max brake rise (estop not limited)
                 # MachE brake cmd 0..1 = 0..100 %: brake = brake_gain * decel [m/s^2] (MKZ table started at 18 %)
                 {"brake_gain": 0.05},
+                # slow for turns: v <= sqrt(curve_lat_acc / curvature) (12 m radius -> 3.5 m/s),
+                # reached at curve_decel before the turn, never below curve_min_speed; curve_lat_acc 0 = off
+                {"curve_lat_acc": 1.0},         # m/s^2; Nov 2 drives took turns at up to 1.8
+                {"curve_decel": 0.8},           # m/s^2, mostly within coast_band (regen)
+                {"curve_min_speed": 2.5},       # m/s
                 # steering: max steering-wheel rate, rad/s (~170 deg/s); 0 = off
                 {"steer_rate_limit": 3.0},
                 # pose heading bias: first MachE drive showed a steady -0.035 rad ephi on straights

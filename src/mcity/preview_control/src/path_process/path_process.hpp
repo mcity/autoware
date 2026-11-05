@@ -37,10 +37,12 @@ public:
     void run();
     void resampling();
     void process_path(double desired_time_resolution, double preview_time);
+    void set_curve_speed(double lat_acc_, double decel_, double min_speed_);
 
 
 private:
     void compute_curvature();
+    void compute_curve_speed();
     int get_closest_index();
 
     double get_desired_velocity(int closest_index);
@@ -60,6 +62,12 @@ private:
     int values;
     double lateral_offset;
     std::map<std::pair<int, int>, double> slope_map; // (x, y) [m] -> road grade [rad]
+
+    // curve speed limit: v <= sqrt(curve_lat_acc / curvature), reached with curve_decel; 0 = off
+    double curve_lat_acc   = 0.0; // m/s^2
+    double curve_decel     = 1.0; // m/s^2
+    double curve_min_speed = 0.0; // m/s
+    std::vector<double> curve_vmax; // per path point, filled by compute_curve_speed()
 };
 
 #endif // PATHFOLLOWING_HPP

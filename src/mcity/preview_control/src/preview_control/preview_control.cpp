@@ -25,6 +25,9 @@ namespace preview_control
         this->declare_parameter("throttle_rate", 0.0);
         this->declare_parameter("brake_rate", 0.0);
         this->declare_parameter("brake_gain", 0.0);
+        this->declare_parameter("curve_lat_acc", 0.0);
+        this->declare_parameter("curve_decel", 1.0);
+        this->declare_parameter("curve_min_speed", 0.0);
         this->declare_parameter("trajectory_abort_size", 0);
         this->declare_parameter("trajectory_loose_abort_size", 0);
 
@@ -48,6 +51,9 @@ namespace preview_control
         this->get_parameter("throttle_rate", throttle_rate);
         this->get_parameter("brake_rate", brake_rate);
         this->get_parameter("brake_gain", brake_gain);
+        this->get_parameter("curve_lat_acc", curve_lat_acc);
+        this->get_parameter("curve_decel", curve_decel);
+        this->get_parameter("curve_min_speed", curve_min_speed);
         this->get_parameter("trajectory_abort_size", trajectory_abort_size);
         this->get_parameter("trajectory_loose_abort_size", trajectory_loose_abort_size);
 
@@ -85,6 +91,7 @@ namespace preview_control
             heading_lookahead_points,
             lateral_offset,
             slope_folder);
+        pathProcess.set_curve_speed(curve_lat_acc, curve_decel, curve_min_speed);
 
         pathFollow.init(_p2c, _vs, _ctrl, gain_folder, max_ey, max_ephi, steering_ratio, consider_delay_lag);
         pathFollow.set_steer_rate_limit(steer_rate_limit);
