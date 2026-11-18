@@ -8,7 +8,6 @@
   <license>To Commercialize</license>
   <author email="shaobxu@gmail.com">shaobing</author>
 
-  <buildtool_depend>ament_python</buildtool_depend>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
