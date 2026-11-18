@@ -333,7 +333,7 @@ Status VelodyneRosOfflineExtractBag::ReadBag()
         serialization.deserialize_message(&extracted_serialized_msg, &extracted_msg);
 
         std::cout << "Found data in topic " << bag_message->topic_name << ": "
-                  << bag_message->time_stamp << std::endl;
+                  << bag_message->recv_timestamp << std::endl;
 
         //        nebula::drivers::NebulaPointCloudPtr pointcloud =
         //        driver_ptr_->ConvertScanToPointcloud(
@@ -341,11 +341,11 @@ Status VelodyneRosOfflineExtractBag::ReadBag()
         auto pointcloud_ts = driver_ptr_->ConvertScanToPointcloud(
           std::make_shared<velodyne_msgs::msg::VelodyneScan>(extracted_msg));
         auto pointcloud = std::get<0>(pointcloud_ts);
-        auto fn = std::to_string(bag_message->time_stamp) + ".pcd";
+        auto fn = std::to_string(bag_message->recv_timestamp) + ".pcd";
 
         if (needs_open) {
           const rosbag2_storage::StorageOptions storage_options_w(
-            {(o_dir / std::to_string(bag_message->time_stamp)).string(), "sqlite3"});
+            {(o_dir / std::to_string(bag_message->recv_timestamp)).string(), "sqlite3"});
           const rosbag2_cpp::ConverterOptions converter_options_w(
             {rmw_get_serialization_format(), rmw_get_serialization_format()});
           writer_ = std::make_unique<rosbag2_cpp::writers::SequentialWriter>();

@@ -740,4 +740,5 @@ void NetMonitor::close_connection()
 }
 
 #include <rclcpp_components/register_node_macro.hpp>
+#include <fstream>
 RCLCPP_COMPONENTS_REGISTER_NODE(NetMonitor)

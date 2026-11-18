@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <string>
+#include <fstream>
 
 static constexpr const char * TEST_FILE = "test";
 

@@ -52,7 +52,7 @@
 #include "pcl_conversions/pcl_conversions.h"
 #include "sensor_msgs/point_cloud2_iterator.hpp"
 #ifdef USE_TF2_SENSOR_MSGS_DEPRECATED_HEADER
-#include "tf2_sensor_msgs/tf2_sensor_msgs.h"
+#include "tf2_sensor_msgs/tf2_sensor_msgs.hpp"
 #else
 #include "tf2_sensor_msgs/tf2_sensor_msgs.hpp"
 #endif

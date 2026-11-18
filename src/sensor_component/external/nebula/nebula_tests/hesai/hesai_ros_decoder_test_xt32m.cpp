@@ -317,7 +317,7 @@ void HesaiRosDecoderTest::ReadBag()
         serialization.deserialize_message(&extracted_serialized_msg, &extracted_msg);
 
         std::cout << "Found data in topic " << bag_message->topic_name << ": "
-                  << bag_message->time_stamp << std::endl;
+                  << bag_message->recv_timestamp << std::endl;
 
         auto extracted_msg_ptr = std::make_shared<pandar_msgs::msg::PandarScan>(extracted_msg);
         auto pointcloud_ts = driver_ptr_->ConvertScanToPointcloud(extracted_msg_ptr);
@@ -327,7 +327,7 @@ void HesaiRosDecoderTest::ReadBag()
         // whether it is because of decoder or deserialize_message.
         if (!pointcloud) continue;
 
-        auto fn = std::to_string(bag_message->time_stamp) + ".pcd";
+        auto fn = std::to_string(bag_message->recv_timestamp) + ".pcd";
 
         auto target_pcd_path = (pcd_dir / fn);
         std::cout << target_pcd_path << std::endl;

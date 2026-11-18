@@ -24,6 +24,7 @@
 
 #include <fmt/format.h>
 #include <syslog.h>
+#include <fstream>
 
 namespace process = boost::process;
 

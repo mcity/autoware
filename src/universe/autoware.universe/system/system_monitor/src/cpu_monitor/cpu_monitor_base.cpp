@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <regex>
 #include <string>
+#include <fstream>
 
 namespace bp = boost::process;
 namespace fs = boost::filesystem;

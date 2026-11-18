@@ -56,6 +56,12 @@ macro(autoware_package)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
+  # Jazzy's yaml_cpp_vendor no longer exports the yaml-cpp library to dependents.
+  if(yaml_cpp_vendor_FOUND)
+    find_package(yaml-cpp REQUIRED)
+    link_libraries(yaml-cpp)
+  endif()
+
   # Set common system includes
   include_directories(SYSTEM
     ${EIGEN3_INCLUDE_DIR}

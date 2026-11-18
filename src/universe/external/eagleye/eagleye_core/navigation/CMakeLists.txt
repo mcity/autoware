@@ -21,6 +21,9 @@ find_package(eagleye_coordinate REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 ament_auto_find_build_dependencies()
+# Jazzy yaml_cpp_vendor no longer exports yaml-cpp to dependents.
+find_package(yaml-cpp REQUIRED)
+link_libraries(yaml-cpp)
 
 include_directories(include)
 

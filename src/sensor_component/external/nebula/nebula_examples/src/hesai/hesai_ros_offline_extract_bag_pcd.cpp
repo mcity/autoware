@@ -326,17 +326,17 @@ Status HesaiRosOfflineExtractBag::ReadBag()
         //        std::cout<<"Found data in topic " << bag_message->topic_name << ": " <<
         //        extracted_test_msg.data << std::endl;
         std::cout << "Found data in topic " << bag_message->topic_name << ": "
-                  << bag_message->time_stamp << std::endl;
+                  << bag_message->recv_timestamp << std::endl;
 
         auto pointcloud_ts = driver_ptr_->ConvertScanToPointcloud(
           std::make_shared<pandar_msgs::msg::PandarScan>(extracted_msg));
         auto pointcloud = std::get<0>(pointcloud_ts);
-        auto fn = std::to_string(bag_message->time_stamp) + ".pcd";
+        auto fn = std::to_string(bag_message->recv_timestamp) + ".pcd";
         //        pcl::io::savePCDFileBinary((o_dir / fn).string(), *pointcloud);
 
         if (needs_open) {
           const rosbag2_storage::StorageOptions storage_options_w(
-            {(o_dir / std::to_string(bag_message->time_stamp)).string(), "sqlite3"});
+            {(o_dir / std::to_string(bag_message->recv_timestamp)).string(), "sqlite3"});
           const rosbag2_cpp::ConverterOptions converter_options_w(
             {rmw_get_serialization_format(), rmw_get_serialization_format()});
           writer_ = std::make_unique<rosbag2_cpp::writers::SequentialWriter>();
