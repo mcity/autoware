@@ -10,7 +10,7 @@ find_path(GeographicLib_INCLUDE_DIR GeographicLib/Config.h
   PATH_SUFFIXES GeographicLib
 )
 set(GeographicLib_INCLUDE_DIRS ${GeographicLib_INCLUDE_DIR})
-find_library(GeographicLib_LIBRARIES NAMES Geographic)
+find_library(GeographicLib_LIBRARIES NAMES GeographicLib GeographicLib)
 
 ament_auto_add_library(geography_utils SHARED
   src/height.cpp

@@ -20,6 +20,7 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>

@@ -227,7 +227,8 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::estimateRigi
     {
       break;
     }
-    result = bfgs.testGradient(gradient_tol);
+    // PCL >= 1.13 dropped BFGS::testGradient(epsilon); same check, version independent.
+    result = (bfgs.gradient.norm() < gradient_tol) ? BFGSSpace::Success : BFGSSpace::Running;
   } while(result == BFGSSpace::Running && inner_iterations_ < max_inner_iterations_);
   if(result == BFGSSpace::NoProgress || result == BFGSSpace::Success || inner_iterations_ == max_inner_iterations_)
   {

@@ -16,7 +16,7 @@ find_path(GeographicLib INCLUDE_DIR GeographicLib/config.h
   PATH_SUFFIXES GeographicLib
 )
 set(GeographicLib_LIBRARIES
-  NAMES Geographic
+  NAMES GeographicLib Geographic
 )
 
 ament_auto_find_build_dependencies()
@@ -40,7 +40,7 @@ ament_auto_add_library(llh_converter SHARED
   include/llh_converter/meridian_convergence_angle_correction.hpp
 )
 
-target_link_libraries(llh_converter PUBLIC ${catkin_LIBRARIES} Geographic)
+target_link_libraries(llh_converter PUBLIC ${catkin_LIBRARIES} GeographicLib)
 
 ament_auto_find_build_dependencies()
 

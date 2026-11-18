@@ -11,7 +11,7 @@ find_path(GeographicLib_INCLUDE_DIR GeographicLib/Config.h
 set(GeographicLib_INCLUDE_DIRS ${GeographicLib_INCLUDE_DIR})
 
 find_library(GeographicLib_LIBRARIES
-  NAMES Geographic
+  NAMES GeographicLib Geographic
 )
 
 find_library(PUGIXML_LIBRARIES

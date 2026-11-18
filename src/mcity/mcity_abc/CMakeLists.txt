@@ -24,7 +24,7 @@ ament_auto_add_library(test_01_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_01_component hiredis Geographic)
+target_link_libraries(test_01_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_01_component
   PLUGIN "test_01::Test01"
@@ -38,7 +38,7 @@ ament_auto_add_library(test_02_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_02_component hiredis Geographic)
+target_link_libraries(test_02_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_02_component
   PLUGIN "test_02::Test02"
@@ -52,7 +52,7 @@ ament_auto_add_library(test_03_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_03_component hiredis Geographic)
+target_link_libraries(test_03_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_03_component
   PLUGIN "test_03::Test03"
@@ -66,7 +66,7 @@ ament_auto_add_library(test_04_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_04_component hiredis Geographic)
+target_link_libraries(test_04_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_04_component
   PLUGIN "test_04::Test04"
@@ -80,7 +80,7 @@ ament_auto_add_library(test_05_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_05_component hiredis Geographic)
+target_link_libraries(test_05_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_05_component
   PLUGIN "test_05::Test05"
@@ -94,7 +94,7 @@ ament_auto_add_library(test_06_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_06_component hiredis Geographic)
+target_link_libraries(test_06_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_06_component
   PLUGIN "test_06::Test06"
@@ -108,7 +108,7 @@ ament_auto_add_library(test_07_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_07_component hiredis Geographic)
+target_link_libraries(test_07_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_07_component
   PLUGIN "test_07::Test07"
@@ -122,7 +122,7 @@ ament_auto_add_library(test_08_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_08_component hiredis Geographic)
+target_link_libraries(test_08_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_08_component
   PLUGIN "test_08::Test08"
@@ -136,7 +136,7 @@ ament_auto_add_library(test_09_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_09_component hiredis Geographic)
+target_link_libraries(test_09_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_09_component
   PLUGIN "test_09::Test09"
@@ -150,7 +150,7 @@ ament_auto_add_library(test_10_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_10_component hiredis Geographic)
+target_link_libraries(test_10_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_10_component
   PLUGIN "test_10::Test10"
@@ -164,7 +164,7 @@ ament_auto_add_library(test_11_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_11_component hiredis Geographic)
+target_link_libraries(test_11_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_11_component
   PLUGIN "test_11::Test11"
@@ -178,7 +178,7 @@ ament_auto_add_library(test_12_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_12_component hiredis Geographic)
+target_link_libraries(test_12_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_12_component
   PLUGIN "test_12::Test12"
@@ -192,7 +192,7 @@ ament_auto_add_library(test_13_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_13_component hiredis Geographic)
+target_link_libraries(test_13_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_13_component
   PLUGIN "test_13::Test13"
@@ -206,7 +206,7 @@ ament_auto_add_library(test_15_component SHARED
   ../redis_client/RedisClient.cpp
 )
 
-target_link_libraries(test_15_component hiredis Geographic)
+target_link_libraries(test_15_component hiredis GeographicLib)
 
 rclcpp_components_register_node(test_15_component
   PLUGIN "test_15::Test15"

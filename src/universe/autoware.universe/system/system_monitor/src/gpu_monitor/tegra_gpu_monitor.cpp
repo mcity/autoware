@@ -22,6 +22,7 @@
 #include "system_monitor/system_monitor_utility.hpp"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <fmt/format.h>
 

@@ -33,7 +33,7 @@ find_path(GeographicLib_INCLUDE_DIR GeographicLib/Config.h
   PATH_SUFFIXES GeographicLib
 )
 set(GeographicLib_INCLUDE_DIRS ${GeographicLib_INCLUDE_DIR})
-find_library(GeographicLib_LIBRARIES NAMES Geographic)
+find_library(GeographicLib_LIBRARIES NAMES GeographicLib GeographicLib)
 
 # ===================================================
 # Libraries
@@ -58,7 +58,7 @@ target_include_directories(
   ${EIGEN3_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
 )
-target_link_libraries(${PROJECT_NAME} Geographic ${PCL_LIBRARIES} Sophus::Sophus)
+target_link_libraries(${PROJECT_NAME} GeographicLib ${PCL_LIBRARIES} Sophus::Sophus)
 
 # ===================================================
 # Executables

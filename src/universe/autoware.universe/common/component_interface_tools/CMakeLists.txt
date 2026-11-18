@@ -3,5 +3,7 @@ project(component_interface_tools)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
+find_package(yaml-cpp REQUIRED)
 ament_auto_add_executable(service_log_checker src/service_log_checker.cpp)
+target_link_libraries(service_log_checker yaml-cpp)
 ament_auto_package(INSTALL_TO_SHARE launch)

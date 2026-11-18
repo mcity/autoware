@@ -169,7 +169,7 @@ void calculateCartesian(const sampler_common::transform::Spline2D & reference, P
     for (size_t i = 1; i < path.yaws.size(); ++i) {
       const auto dyaw =
         autoware::common::helper_functions::wrap_angle(path.yaws[i] - path.yaws[i - 1]);
-      path.curvatures.push_back(dyaw / (path.lengths[i - 1], path.lengths[i]));
+      path.curvatures.push_back(dyaw / (path.lengths[i] - path.lengths[i - 1]));
     }
     path.curvatures.push_back(path.curvatures.back());
   }

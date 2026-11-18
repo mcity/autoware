@@ -1,35 +1,42 @@
 # Mcity Autoware (Ford Mach-E)
 
-Mcity's fork of Autoware Universe (Oct 2023 base), ROS 2 Humble on Ubuntu 22.04. Mcity code lives in
-`src/mcity/`. The real car is a Ford Mach-E driven through a Dataspeed DBW kit.
+Mcity's fork of Autoware Universe (Oct 2023 base). Mcity code lives in `src/mcity/`. The real car is a
+Ford Mach-E driven through a Dataspeed DBW kit.
+
+**Branch `autoware_ubuntu_24` targets ROS 2 Jazzy on Ubuntu 24.04** (gcc 13, Python 3.12). `main` stays on
+Humble / Ubuntu 22.04. Jazzy port notes:
+- Use the `.hpp` headers for cv_bridge, tf2_geometry_msgs, tf2_eigen and image_geometry. Jazzy removed the `.h` versions.
+- `autoware_cmake` keeps `-Werror` but makes deprecated-declarations and gcc 13
+  dangling-reference/maybe-uninitialized warnings non-fatal, and defines `ROS_DISTRO_JAZZY`.
 
 ## Fresh-machine setup
 
 Clone from **`https://github.com/mcity/autoware.git`** (remote `origin`). The README's
 `michigan-traffic-lab/autoware` URL (remote `mtl`) is far behind and has none of the Mach-E work.
 
-Prerequisites: Ubuntu 22.04 with ROS 2 Humble Desktop installed in `/opt/ros/humble`. The user has to run the `sudo` steps.
+Prerequisites: Ubuntu 24.04 with ROS 2 Jazzy Desktop installed in `/opt/ros/jazzy`. The user has to run the `sudo` steps.
 
 ```bash
-sudo apt-get install -y libhiredis-dev libgeographic-dev ccache python3-rosdep2 \
-  python3-colcon-common-extensions ros-humble-rmw-cyclonedds-cpp
-git clone https://github.com/mcity/autoware.git ~/autoware
+sudo apt-get install -y libhiredis-dev libgeographiclib-dev ccache python3-rosdep \
+  python3-colcon-common-extensions ros-jazzy-rmw-cyclonedds-cpp
+git clone -b autoware_ubuntu_24 https://github.com/mcity/autoware.git ~/autoware
 cd ~/autoware
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 sudo rosdep init        # "already initialized" error is fine
 rosdep update
-rosdep install -y --from-paths src --ignore-src --rosdistro humble
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel-workers 8
+rosdep install -y --from-paths src --ignore-src --rosdistro jazzy -r
+MAKEFLAGS=-j6 colcon build --symlink-install --parallel-workers 6 --cmake-args -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DBUILD_TESTING=OFF
 ```
 
 - The full build takes 2-4 h. Run it in the background, and lower `--parallel-workers` if the machine runs out of RAM.
 - Add to `~/.bashrc` once. Order matters (see Shadowing):
   ```bash
-  source /opt/ros/humble/setup.bash
+  source /opt/ros/jazzy/setup.bash
   source ~/autoware/install/setup.bash
   export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
   ```
-- Real car only: install the Dataspeed CAN driver with `sudo apt-get install -y ros-humble-ds-dbw`. Start it with
+- Real car only: install the Dataspeed CAN driver with `sudo apt-get install -y ros-jazzy-ds-dbw`. Start it with
   `ros2 launch ds_dbw_can dbw.launch.xml`.
 
 Verify in a new terminal:
@@ -50,7 +57,7 @@ For a package whose dependencies changed, use `--packages-up-to <pkg>`.
   Its `CMakeLists.txt` is a stale leftover. The package is `ament_python` and builds from `setup.py`.
 - `ds_dbw_msgs`: **locally patched** Dataspeed 2.4.1. It adds `SteeringCmd.control_mode`
   (`CONTROL_LANE_KEEP`), `lane_keep_deny` diagnostics and the `SteerFord*` messages. The apt
-  `ros-humble-ds-dbw-msgs` lacks these, so the workspace copy must stay on top of `/opt/ros`. Do not replace it with upstream.
+  `ros-<distro>-ds-dbw-msgs` lacks these, so the workspace copy must stay on top of `/opt/ros`. Do not replace it with upstream.
 - `dbw_ford_msgs` 2.1.3: vendored for `ThrottleInfoReport`.
 - `mcity_msgs`: `Control`, `VehicleState`, `VehiclePlanning`.
 - `preview_control`: lateral LQR + speed PI controller. Read `src/mcity/preview_control/CLAUDE.md` before touching it.

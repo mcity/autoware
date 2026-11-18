@@ -12,7 +12,7 @@ find_path(GeographicLib_INCLUDE_DIR GeographicLib/Config.h
 
 set(GeographicLib_INCLUDE_DIRS ${GeographicLib_INCLUDE_DIR})
 find_library(GeographicLib_LIBRARIES
-  NAMES Geographic
+  NAMES GeographicLib Geographic
 )
 
 set(GNSS_POSER_HEADERS
@@ -25,7 +25,7 @@ ament_auto_add_library(gnss_poser_node SHARED
 )
 
 target_link_libraries(gnss_poser_node
-  Geographic
+  GeographicLib
 )
 
 rclcpp_components_register_node(gnss_poser_node

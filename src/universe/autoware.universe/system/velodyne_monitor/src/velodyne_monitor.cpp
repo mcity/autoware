@@ -17,6 +17,10 @@
  * @brief Velodyne monitor class
  */
 
+// fmt must come before cpprest (pulled in by velodyne_monitor.hpp), which defines a U(x) macro.
+#define FMT_HEADER_ONLY
+#include <fmt/format.h>
+
 #include "velodyne_monitor/velodyne_monitor.hpp"
 
 #include <boost/algorithm/string/join.hpp>
@@ -26,9 +30,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#define FMT_HEADER_ONLY
-#include <fmt/format.h>
 
 VelodyneMonitor::VelodyneMonitor() : Node("velodyne_monitor"), updater_(this)
 {

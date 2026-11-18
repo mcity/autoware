@@ -19,7 +19,7 @@ find_path(GeographicLib_INCLUDE_DIR GeographicLib/Config.h
   PAHT_SUFFIXES GeographicLib
 )
 set(GeographicLib_LIBRARIES
-  NAMES Geographic
+  NAMES GeographicLib Geographic
 )
 
 include_directories(
@@ -50,7 +50,7 @@ ament_export_include_directories(include)
 ament_target_dependencies(eagleye_coordinate)
 
 target_link_libraries(eagleye_coordinate
-  Geographic
+  GeographicLib
 )
 
 install(
