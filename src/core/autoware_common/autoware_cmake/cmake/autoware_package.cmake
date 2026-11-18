@@ -26,7 +26,8 @@ macro(autoware_package)
   endif()
   # GCC >= 13 (Ubuntu 24.04) adds noisy warnings that are frequently false positives.
   if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
-    add_compile_options(-Wno-error=dangling-reference -Wno-error=maybe-uninitialized)
+    add_compile_options(-Wno-error=dangling-reference -Wno-error=maybe-uninitialized
+      -Wno-error=array-bounds -Wno-error=stringop-overflow)
   endif()
 
   # Ignore PCL errors in Clang

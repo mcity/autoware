@@ -350,9 +350,13 @@ Status VelodyneRosOfflineExtractBag::ReadBag()
             {rmw_get_serialization_format(), rmw_get_serialization_format()});
           writer_ = std::make_unique<rosbag2_cpp::writers::SequentialWriter>();
           writer_->open(storage_options_w, converter_options_w);
-          writer_->create_topic(
-            {bag_message->topic_name, "velodyne_msgs/msg/VelodyneScan",
-              rmw_get_serialization_format(), ""});
+          {
+            rosbag2_storage::TopicMetadata topic_metadata;
+            topic_metadata.name = bag_message->topic_name;
+            topic_metadata.type = "velodyne_msgs/msg/VelodyneScan";
+            topic_metadata.serialization_format = rmw_get_serialization_format();
+            writer_->create_topic(topic_metadata);
+          }
           needs_open = false;
         }
         writer_->write(bag_message);

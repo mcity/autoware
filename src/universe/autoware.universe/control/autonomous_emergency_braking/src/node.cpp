@@ -19,7 +19,6 @@
 #include <tier4_autoware_utils/geometry/geometry.hpp>
 #include <tier4_autoware_utils/ros/marker_helper.hpp>
 
-#include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
 
 #include <pcl/filters/voxel_grid.h>
 #include <tf2/utils.h>

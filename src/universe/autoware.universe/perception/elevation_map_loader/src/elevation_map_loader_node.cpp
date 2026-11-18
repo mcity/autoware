@@ -26,6 +26,8 @@
 
 #include <grid_map_msgs/msg/grid_map.hpp>
 
+#include <boost/geometry/geometries/multi_polygon.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/convex_hull.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
@@ -367,7 +369,8 @@ void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
       grid_map::Polygon polygon;
 
       if (lane_filter_.lane_margin_ > 0) {
-        lanelet::BasicPolygons2d out;
+        // Boost >= 1.83 requires a registered multi_polygon as bg::buffer output.
+        bg::model::multi_polygon<bg::model::polygon<lanelet::BasicPoint2d, true, false>> out;
         bg::strategy::buffer::distance_symmetric<double> distance_strategy(
           lane_filter_.lane_margin_);
         bg::strategy::buffer::join_miter join_strategy;
@@ -377,7 +380,7 @@ void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
         bg::buffer(
           lane_polygon, out, distance_strategy, side_strategy, join_strategy, end_strategy,
           point_strategy);
-        lane_polygon = out.front();
+        lane_polygon = lanelet::BasicPolygon2d(out.front().outer().begin(), out.front().outer().end());
       }
       for (const auto & p : lane_polygon) {
         polygon.addVertex(grid_map::Position(p[0], p[1]));

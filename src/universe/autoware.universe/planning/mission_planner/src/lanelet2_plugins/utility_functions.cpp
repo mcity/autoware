@@ -84,7 +84,7 @@ lanelet::ConstLanelet combine_lanelets(const lanelet::ConstLanelets & lanelets)
   const auto left_bound = lanelet::LineString3d(lanelet::InvalId, lefts);
   const auto right_bound = lanelet::LineString3d(lanelet::InvalId, rights);
   auto combined_lanelet = lanelet::Lanelet(lanelet::InvalId, left_bound, right_bound);
-  return std::move(combined_lanelet);
+  return combined_lanelet;
 }
 
 std::vector<geometry_msgs::msg::Point> convertCenterlineToPoints(const lanelet::Lanelet & lanelet)
