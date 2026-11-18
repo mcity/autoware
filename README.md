@@ -1,28 +1,28 @@
 # Autoware
 
-This is the Mcity-adapted version of Autoware Universe, based on the October 2023 release and extensively modified. If you are looking for the most up-to-date Autoware Universe, please check out the official [**Documentation**](https://autowarefoundation.github.io/autoware-documentation/main/).
+This is the Mcity-adapted version of Autoware Universe, based on the October 2023 release and extensively modified. This branch (`autoware_ubuntu_24`) targets **ROS 2 Jazzy on Ubuntu 24.04**; the `main` branch targets ROS 2 Humble on Ubuntu 22.04. If you are looking for the most up-to-date Autoware Universe, please check out the official [**Documentation**](https://autowarefoundation.github.io/autoware-documentation/main/).
 
 
 ## Prerequisites
 
 - __Hardware__: A CPU based on Intel x86 architecture with at least 16 cores, at least 16 GB of system memory, and a dedicated GPU with at least 8 GB of VRAM.
 
-- __System__: Ubuntu 22.04 (native system installation rather than a virtual machine or Windows Subsystem for Linux)
+- __System__: Ubuntu 24.04 (native system installation rather than a virtual machine or Windows Subsystem for Linux)
 
-- __Software__: Follow the official instructions to install [**ROS Humble Desktop**](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html).
+- __Software__: Follow the official instructions to install [**ROS 2 Jazzy Desktop**](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
 
 ## Installation
 
 ### Install dependencies
 
 ```bash
-sudo apt-get install libhiredis-dev libgeographic-dev ccache python3-rosdep2 python3-colcon-common-extensions ros-humble-rmw-cyclonedds-cpp
+sudo apt-get install libhiredis-dev libgeographiclib-dev ccache python3-rosdep python3-colcon-common-extensions ros-jazzy-rmw-cyclonedds-cpp
 ```
 
 ### Clone the repository
 
 ```bash
-git clone https://github.com/michigan-traffic-lab/autoware.git
+git clone -b autoware_ubuntu_24 https://github.com/mcity/autoware.git
 ```
 
 ### Navigate to the Autoware directory
@@ -34,36 +34,37 @@ cd autoware
 ### Source the ROS distribution
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 ```
 
 ### Initialize rosdep
 
 ```bash
-rosdep init
+sudo rosdep init   # an "already initialized" error is fine
 rosdep update
 ```
 
 ### Open a new terminal and install ROS 2 package dependencies
 
 ```bash
-rosdep install -y --from-paths src --ignore-src --rosdistro $ROS_DISTRO
+rosdep install -y --from-paths src --ignore-src --rosdistro $ROS_DISTRO -r
 ```
 
 ### Build the workspace
 
 ```bash
 # This may take 2–4 hours depending on hardware. You can limit the number of parallel build jobs based on your available CPU cores and memory.
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel-workers 8
+MAKEFLAGS=-j6 colcon build --symlink-install --parallel-workers 6 --cmake-args -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DBUILD_TESTING=OFF
 ```
 
 ### Post Installation Instructions
 
-We recommend running the following to automatically configure your environment each time a new terminal is opened. This ensures that ROS Humble, Autoware, and Cyclone DDS are properly sourced and available by default.
+We recommend running the following to automatically configure your environment each time a new terminal is opened. This ensures that ROS 2 Jazzy, Autoware, and Cyclone DDS are properly sourced and available by default.
 
 ```bash
-# Source ROS Humble setup
-echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+# Source ROS 2 Jazzy setup
+echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 
 # Source Autoware workspace setup
 echo "source ~/autoware/install/setup.bash" >> ~/.bashrc
