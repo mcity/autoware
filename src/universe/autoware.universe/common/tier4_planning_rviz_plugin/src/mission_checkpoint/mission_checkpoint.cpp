@@ -48,7 +48,7 @@
 #include <mission_checkpoint/mission_checkpoint.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif

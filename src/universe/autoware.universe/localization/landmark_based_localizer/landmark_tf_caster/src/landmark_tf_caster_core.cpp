@@ -21,7 +21,7 @@
 
 #include <lanelet2_core/LaneletMap.h>
 #ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_eigen/tf2_eigen.hpp>
 #else
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif

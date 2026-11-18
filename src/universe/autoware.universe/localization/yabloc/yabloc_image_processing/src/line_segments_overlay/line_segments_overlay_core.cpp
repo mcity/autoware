@@ -18,7 +18,7 @@
 #include <yabloc_common/cv_decompress.hpp>
 #include <yabloc_common/pub_sub.hpp>
 
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 
 namespace yabloc::line_segments_overlay

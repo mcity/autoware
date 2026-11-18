@@ -22,7 +22,7 @@
 #include <pcl/filters/crop_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
 #ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_eigen/tf2_eigen.hpp>
 #else
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif

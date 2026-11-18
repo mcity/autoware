@@ -21,6 +21,12 @@ macro(autoware_package)
   endif()
   if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+    # ROS 2 Jazzy deprecates many Humble-era APIs; keep them visible but non-fatal.
+    add_compile_options(-Wno-error=deprecated-declarations)
+  endif()
+  # GCC >= 13 (Ubuntu 24.04) adds noisy warnings that are frequently false positives.
+  if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
+    add_compile_options(-Wno-error=dangling-reference -Wno-error=maybe-uninitialized)
   endif()
 
   # Ignore PCL errors in Clang
@@ -42,6 +48,8 @@ macro(autoware_package)
     add_compile_definitions(ROS_DISTRO_GALACTIC)
   elseif(${ROS_DISTRO} STREQUAL "humble")
     add_compile_definitions(ROS_DISTRO_HUMBLE)
+  elseif(${ROS_DISTRO} STREQUAL "jazzy")
+    add_compile_definitions(ROS_DISTRO_JAZZY)
   endif()
 
   # Find dependencies

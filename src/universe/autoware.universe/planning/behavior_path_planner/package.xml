@@ -46,7 +46,6 @@
   <depend>autoware_auto_planning_msgs</depend>
   <depend>autoware_auto_tf2</depend>
   <depend>autoware_auto_vehicle_msgs</depend>
-  <depend>behaviortree_cpp_v3</depend>
   <depend>freespace_planning_algorithms</depend>
   <depend>geometry_msgs</depend>
   <depend>interpolation</depend>

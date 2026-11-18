@@ -27,7 +27,7 @@
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_signal_array.hpp>
 
-#include <image_geometry/pinhole_camera_model.h>
+#include <image_geometry/pinhole_camera_model.hpp>
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/time_synchronizer.h>

@@ -48,11 +48,11 @@
 #include <Eigen/Geometry>
 #include <opencv4/opencv2/calib3d.hpp>
 
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 #include <tf2/LinearMath/Transform.h>
 
 #ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_eigen/tf2_eigen.hpp>
 #else
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif
