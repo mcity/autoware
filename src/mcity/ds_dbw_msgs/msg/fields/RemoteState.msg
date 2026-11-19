@@ -1,7 +1,0 @@
-uint8 value
-
-uint8 ESTOP=0
-uint8 REMOTE_PAUSE=1
-uint8 REMOTE_CONTROL=2
-uint8 LOCAL_CONTROL=3
-uint8 CAN_TIMEOUT=15

@@ -49,7 +49,7 @@ Verify in a new terminal:
 ```bash
 ros2 pkg prefix mcity_mache_bywire   # -> ~/autoware/install/mcity_mache_bywire
 ros2 pkg prefix preview_control      # -> ~/autoware/install/preview_control
-python3 -c "import ds_dbw_msgs.msg as m; assert hasattr(m.SteeringCmd, 'CONTROL_LANE_KEEP'); print('ok')"
+python3 -c "import ds_dbw_msgs.msg as m; assert hasattr(m.SteeringCmd, 'CONTROL_LANE_KEEP'); print(m.__file__)"  # -> /opt/ros/jazzy/...
 ```
 
 After the first build, rebuild only what changed: `colcon build --symlink-install --packages-select <pkg>`.
@@ -61,9 +61,11 @@ For a package whose dependencies changed, use `--packages-up-to <pkg>`.
   `ros2 run mcity_mache_bywire mcity_mache_bywire` uses the code defaults (`max_throttle` 0.45).
   `ros2 launch mcity_mache_bywire mcity_mache_bywire.launch.py` sets `max_throttle` 1.0, `max_speed` 20, `max_lat_acc` 2.5.
   Its `CMakeLists.txt` is a stale leftover. The package is `ament_python` and builds from `setup.py`.
-- `ds_dbw_msgs`: **locally patched** Dataspeed 2.4.1. It adds `SteeringCmd.control_mode`
-  (`CONTROL_LANE_KEEP`), `lane_keep_deny` diagnostics and the `SteerFord*` messages. The apt
-  `ros-<distro>-ds-dbw-msgs` lacks these, so the workspace copy must stay on top of `/opt/ros`. Do not replace it with upstream.
+- `ds_dbw_msgs` comes from apt (`ros-jazzy-ds-dbw-msgs` >= 2.4.3; rosdep installs it). The workspace used to carry a
+  patched 2.4.1 copy for `SteeringCmd.control_mode` (`CONTROL_LANE_KEEP`), `lane_keep_deny` and `SteerFord*`. apt 2.4.3
+  has all of these, and `ds_dbw_can`'s `dbw_node` uses the apt definitions. Do not re-vendor an older copy: `GearReport`,
+  `ThrottleReport` and `WheelSpeeds` changed layout (e.g. `WheelSpeeds.front_left` became `front_left_rad_s`/`front_left_m_s`),
+  so a mismatched copy decodes the car's reports wrong without raising an error.
 - `dbw_ford_msgs` 2.1.3: vendored for `ThrottleInfoReport`.
 - `mcity_msgs`: `Control`, `VehicleState`, `VehiclePlanning`.
 - `preview_control`: lateral LQR + speed PI controller. Read `src/mcity/preview_control/CLAUDE.md` before touching it.

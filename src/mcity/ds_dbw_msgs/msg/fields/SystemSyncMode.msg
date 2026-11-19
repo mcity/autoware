@@ -1,8 +1,0 @@
-uint8 value
-
-uint8 NONE=0
-uint8 DISENGAGES=1
-uint8 ALL_OR_NONE=2
-uint8 ALL_OR_NONE_WITH_BTN=3
-uint8 PARTIAL=4
-uint8 PARTIAL_WITH_BTN=5

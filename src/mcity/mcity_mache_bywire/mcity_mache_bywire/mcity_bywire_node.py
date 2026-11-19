@@ -299,13 +299,16 @@ class McityBywire(Node):
         self.vs_msg.gear_pos = msg.gear.value
 
     def _wheelspeed_rept_cb(self, msg: WheelSpeeds):
-        self.vs_msg.wheel_v_front_left  = msg.front_left
-        self.vs_msg.wheel_v_front_right = msg.front_right
-        self.vs_msg.wheel_v_rear_left   = msg.rear_left
-        self.vs_msg.wheel_v_rear_right  = msg.rear_right
+        # ds_dbw_msgs >= 2.4.3 (apt) splits wheel speeds into *_rad_s and *_m_s.
+        # Keep publishing rad/s in wheel_v_* and deriving speed_x from our own WHEEL_RADIUS,
+        # exactly as before the switch from the patched 2.4.1 copy (fields front_left, ...).
+        self.vs_msg.wheel_v_front_left  = msg.front_left_rad_s
+        self.vs_msg.wheel_v_front_right = msg.front_right_rad_s
+        self.vs_msg.wheel_v_rear_left   = msg.rear_left_rad_s
+        self.vs_msg.wheel_v_rear_right  = msg.rear_right_rad_s
         # Derive longitudinal vehicle speed; SteeringReport no longer carries speed in ds_dbw_msgs
-        avg_rad_s = (msg.front_left + msg.front_right +
-                     msg.rear_left  + msg.rear_right) / 4.0
+        avg_rad_s = (msg.front_left_rad_s + msg.front_right_rad_s +
+                     msg.rear_left_rad_s  + msg.rear_right_rad_s) / 4.0
         self.vs_msg.speed_x = avg_rad_s * WHEEL_RADIUS
 
     def float_check(slef, float_msg):
