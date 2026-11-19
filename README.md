@@ -71,6 +71,10 @@ echo "source ~/autoware/install/setup.bash" >> ~/.bashrc
 
 # Set Cyclone DDS as the default RMW implementation
 echo "export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" >> ~/.bashrc
+
+# Required: CycloneDDS config for this machine (loopback, up to 200 participants).
+# Without it most Autoware nodes fail with "Failed to find a free participant index".
+echo "export CYCLONEDDS_URI=file://\$HOME/autoware/cyclonedds.xml" >> ~/.bashrc
 ```
 
 

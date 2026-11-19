@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CycloneDDS config for running the Mcity Autoware stack on a single machine.
+  Use with:  export CYCLONEDDS_URI=file://$HOME/autoware/cyclonedds.xml
+
+  Why: without multicast (Wi-Fi interfaces, or loopback without the multicast flag) CycloneDDS
+  falls back to unicast discovery with participant indices, and the default limit of 10 participants
+  is far below what Autoware starts (30+ processes). Every node past the limit dies with
+  "Failed to find a free participant index for domain 0" / "error creating node".
+
+  Binding to loopback keeps ROS traffic on this machine, so it does not depend on Wi-Fi staying up and
+  does not leak onto the campus network. Other machines (e.g. a second laptop running RViz) will NOT see
+  these topics; use a wired interface config for multi-machine setups.
+-->
+<CycloneDDS xmlns="https://cdds.io/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+  <Domain Id="any">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="lo" />
+      </Interfaces>
+      <AllowMulticast>false</AllowMulticast>
+      <MaxMessageSize>65500B</MaxMessageSize>
+    </General>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+      <Peers>
+        <Peer address="127.0.0.1" />
+      </Peers>
+    </Discovery>
+  </Domain>
+</CycloneDDS>

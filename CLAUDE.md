@@ -35,7 +35,13 @@ MAKEFLAGS=-j6 colcon build --symlink-install --parallel-workers 6 --cmake-args -
   source /opt/ros/jazzy/setup.bash
   source ~/autoware/install/setup.bash
   export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+  export CYCLONEDDS_URI=file://$HOME/autoware/cyclonedds.xml
   ```
+- `CYCLONEDDS_URI` is required. Without multicast (Wi-Fi, or `lo` without the multicast flag) CycloneDDS allows
+  only 10 participants per machine. Autoware starts 30+, so later nodes die with
+  `Failed to find a free participant index for domain 0` / `RCLError: error creating node`.
+  [cyclonedds.xml](cyclonedds.xml) binds to loopback and allows 200 participants. It is single-machine only:
+  another machine (e.g. RViz on a laptop) will not see the topics.
 - Real car only: install the Dataspeed CAN driver with `sudo apt-get install -y ros-jazzy-ds-dbw`. Start it with
   `ros2 launch ds_dbw_can dbw.launch.xml`.
 
@@ -71,8 +77,10 @@ For a package whose dependencies changed, use `--packages-up-to <pkg>`.
 -> relay `ros2 run mcity_vigrade mcity_preview_control` -> `/mcity/vehicle_control`
 -> `mcity_mache_bywire` -> Dataspeed `ds_dbw_can` -> car.
 
-The relay is **not in this repo**. It lives in the separate `mcity_demos` workspace, needs `terasim_cosim` and a
-Redis server, and forwards commands only while the Redis control-override `FLAG` is `"False"`.
+The relay is **not in this repo**. It lives in the separate `mcity_demos` workspace (not a git repo; the
+`run_*_demo.sh` scripts there start the whole stack) and needs `terasim_cosim` and a Redis server. It forwards
+ViGrade's command when the Redis control-override `FLAG` is `"True"`, and Autoware's preview_control command when
+`FLAG` is `"False"` **or missing**. The demo scripts run `redis-cli flushall`, so they start under Autoware control.
 Ask the user where to get it if the real-car chain is needed.
 
 ## Mach-E facts
