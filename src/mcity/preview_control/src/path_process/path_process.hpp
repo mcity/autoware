@@ -38,10 +38,13 @@ public:
     void resampling();
     void process_path(double desired_time_resolution, double preview_time);
     void set_curve_speed(double lat_acc_, double decel_, double min_speed_);
+    // Curvature preview for the feedforward (p2c.cr_vector); gain 0 = off (cr_vector stays empty).
+    void set_feedforward(double gain) { ff_gain = gain > 0 ? gain : 0.0; }
 
 
 private:
     void compute_curvature();
+    void fill_curvature_preview(int closest_index);
     void compute_curve_speed();
     int get_closest_index();
 
@@ -68,6 +71,10 @@ private:
     double curve_decel     = 1.0; // m/s^2
     double curve_min_speed = 0.0; // m/s
     std::vector<double> curve_vmax; // per path point, filled by compute_curve_speed()
+
+    // feedforward: signed path curvature (left +, 1/m) per processed path point, and its arc length
+    double ff_gain = 0.0;
+    std::vector<double> path_s, path_kappa;
 };
 
 #endif // PATHFOLLOWING_HPP

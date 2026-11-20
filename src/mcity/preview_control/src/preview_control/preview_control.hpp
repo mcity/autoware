@@ -78,9 +78,11 @@ private:
     bool   consider_delay_lag       = false;
     double steer_rate_limit         = 0.0;
     double steer_filter_tau         = 0.0;
+    double feedforward_gain         = 0.0;
     double max_speed                = 0.0;
     double coast_band               = 0.0;
     double throttle_rate            = 0.0;
+    double throttle_fall_rate       = 0.0;
     double brake_rate               = 0.0;
     double brake_gain               = 0.0;
     double lift_decel               = 0.0;

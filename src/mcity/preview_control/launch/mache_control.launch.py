@@ -42,7 +42,8 @@ def launch_setup(context):
                 {"speed_ctrl_kp": 1.0},         # was 1.8 (MKZ)
                 {"speed_ctrl_ki": 0.3},         # was 0.6
                 {"coast_band": 0.6},            # m/s^2 of decel handled by lift-off before any brake
-                {"throttle_rate": 0.3},         # 1/s max throttle rise
+                {"throttle_rate": 0.15},        # 1/s max throttle rise (2026-11-20: 0.3 -> 0.15, "sudden throttle")
+                {"throttle_fall_rate": 0.3},    # 1/s max throttle drop while no brake is wanted (was immediate)
                 {"brake_rate": 0.5},            # 1/s max brake rise (estop not limited)
                 # MachE brake cmd 0..1 = 0..100 %: brake = brake_gain * decel [m/s^2] (MKZ table started at 18 %)
                 {"brake_gain": 0.05},
@@ -59,10 +60,13 @@ def launch_setup(context):
                 {"curve_decel": 0.6},           # m/s^2, within coast_band (regen), starts slowing earlier
                 {"curve_min_speed": 2.0},       # m/s
                 # steering: max steering-wheel rate, rad/s (~115 deg/s); 0 = off. 2026-11-20: 3.0 -> 2.0
-                {"steer_rate_limit": 2.0},
+                {"steer_rate_limit": 2.5},      # 2026-11-20: 2.0 was too slow for the sharp turns (path-departure stop)
                 # low-pass on the steering command [s] so it ramps instead of jumping; 0 = off.
                 # Must match params.json tau = actuator 0.094 + this (gain tables are designed with it).
-                {"steer_filter_tau": 0.15},
+                {"steer_filter_tau": 0.20},
+                # curvature preview (feedforward) from the path, scaled by this; 0 = off (feedback only, turns late).
+                # Starts steering before a turn instead of reacting after ey builds up. 2026-11-20: enabled.
+                {"feedforward_gain": 1.0},
                 # pose heading bias: first MachE drive showed a steady -0.035 rad ephi on straights
                 {"heading_offset": -0.03},
                 {"heading_lookahead_points": 10},

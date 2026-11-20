@@ -21,9 +21,11 @@ namespace preview_control
         this->declare_parameter("consider_delay_lag", false);
         this->declare_parameter("steer_rate_limit", 0.0);
         this->declare_parameter("steer_filter_tau", 0.0);
+        this->declare_parameter("feedforward_gain", 0.0);
         this->declare_parameter("max_speed", 0.0);
         this->declare_parameter("coast_band", 0.0);
         this->declare_parameter("throttle_rate", 0.0);
+        this->declare_parameter("throttle_fall_rate", 0.0);
         this->declare_parameter("brake_rate", 0.0);
         this->declare_parameter("brake_gain", 0.0);
         this->declare_parameter("lift_decel", 0.0);
@@ -50,9 +52,11 @@ namespace preview_control
         this->get_parameter("consider_delay_lag", consider_delay_lag);
         this->get_parameter("steer_rate_limit", steer_rate_limit);
         this->get_parameter("steer_filter_tau", steer_filter_tau);
+        this->get_parameter("feedforward_gain", feedforward_gain);
         this->get_parameter("max_speed", max_speed);
         this->get_parameter("coast_band", coast_band);
         this->get_parameter("throttle_rate", throttle_rate);
+        this->get_parameter("throttle_fall_rate", throttle_fall_rate);
         this->get_parameter("brake_rate", brake_rate);
         this->get_parameter("brake_gain", brake_gain);
         this->get_parameter("lift_decel", lift_decel);
@@ -98,6 +102,7 @@ namespace preview_control
             lateral_offset,
             slope_folder);
         pathProcess.set_curve_speed(curve_lat_acc, curve_decel, curve_min_speed);
+        pathProcess.set_feedforward(feedforward_gain);
 
         pathFollow.init(_p2c, _vs, _ctrl, gain_folder, max_ey, max_ephi, steering_ratio, consider_delay_lag);
         pathFollow.set_steer_rate_limit(steer_rate_limit);
@@ -105,6 +110,7 @@ namespace preview_control
         speedCtrl.ini(_p2c, _vs, _ctrl, speed_ctrl_kp, speed_ctrl_ki, FREQ);
         speedCtrl.set_smoothing(max_speed, coast_band, throttle_rate, brake_rate, brake_gain);
         speedCtrl.set_lift_off(lift_decel, reset_when_dbw_off);
+        speedCtrl.set_throttle_fall_rate(throttle_fall_rate);
     }
 
     void PreviewControl::publishCmd()

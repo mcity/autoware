@@ -146,7 +146,7 @@ float PathFollowing::preview()
     int   crSize = _p2c->cr_vector.size();
 
     PVC.feedForward = 0;
-    for (int i = 0; i < MIN(50, crSize); ++i) // previewStepLen 2s
+    for (int i = 0; i < MIN(150, crSize); ++i) // full designed horizon (150 x 0.04 s); 50 over-steered ~15 %
     {
         cr_i = _p2c->cr_vector.at(i);
         PVC.feedForward += ( kff[vN+0][i+2]*(1-beta) + kff[vN+1][i+2]*beta ) * cr_i;

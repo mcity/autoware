@@ -26,6 +26,10 @@ gain tables only; the MKZ tables are kept just for CARLA.
     doesn't jump), `steer_rate_limit` 3.0 -> 2.0 rad/s, curve speed `curve_lat_acc` 1.0 -> 0.6,
     `curve_decel` 0.8 -> 0.6, `curve_min_speed` 2.5 -> 2.0. The filter lag is in the gain tables:
     params.json `tau` 0.244 = actuator 0.094 + filter 0.15. Change one, regenerate with the other.
+  - 2026-11-20 (later): turns were too slow with steer_rate_limit 2.0 (path-departure stop in the sharp right
+    turn), and the driver still felt sudden steering/throttle: steer_rate_limit 2.5, steer_filter_tau 0.20
+    (params.json tau 0.294), feedforward_gain 1.0, throttle_rate 0.15, new `throttle_fall_rate` 0.3 (throttle
+    eases off unless a brake is wanted; brake requests still cut it at once).
   - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
     `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
     and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.
@@ -78,7 +82,10 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
 ## Code facts
 - Control law (path_follow.cpp): `tan(delta) = -K*[ey, v*ephi, ephi, 0, delta_meas, cmd buffer] - kff*curvature`;
   `dERate = v*hE`, `hERate = 0`; 5-slot command buffer updated every 0.04 s.
-- `p2c.cr_vector` is never filled -> feedforward inactive; only feedback runs.
+- Feedforward (curvature preview) is active since 2026-11-20 when `feedforward_gain` > 0 (mache launch: 1.0):
+  `path_process` computes signed path curvature (left +, 2 m chord window) and fills `p2c.cr_vector` with it
+  every `max(v,1)*0.04` m ahead of the closest point; `path_follow` sums all 150 kff columns (was 50,
+  which over-steered ~15 %). Replay check of the 2026-11-20 drive: FF turns the same way, ~1 s earlier.
 - path_process: `process_path()` downsamples the plan to one point per 0.04 s of travel (vd floored at
   1.5 m/s) up to `preview_time`; falls back to fixed 0.2 m `resampling()` if either param is <= 0.
   The closest index is stepped back ~1 m along the path (localization offset).

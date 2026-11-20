@@ -65,6 +65,7 @@ void pathProcessing::run(){
     _p2c->ephi = get_orientation_error(closest_index);
     _p2c->ey = get_lateral_error(closest_index);
     _p2c->slope = get_slope();
+    fill_curvature_preview(closest_index);
 
     RCLCPP_INFO(rclcpp::get_logger("path_process"), "remaining length %d", size);
     RCLCPP_INFO(rclcpp::get_logger("path_process"), "index %d", closest_index);
@@ -110,6 +111,7 @@ void pathProcessing::process_path(double desired_time_resolution, double preview
     // fall back to fixed 0.2 m spacing when the time-based parameters are not set
     if (desired_time_resolution <= 0.0 || preview_time <= 0.0){
         resampling();
+        compute_curvature();
         return;
     }
 
@@ -142,6 +144,63 @@ void pathProcessing::process_path(double desired_time_resolution, double preview
     _p2c->ori_vector = ds_ori;
 
     compute_curve_speed();
+    compute_curvature();
+}
+
+// Signed curvature (left turn +) at each processed path point, from the heading change of the chords
+// ~2 m behind and ahead (same window as compute_curve_speed, so planner jitter is rejected).
+void pathProcessing::compute_curvature(){
+    size_t n = _p2c->x_vector.size();
+    path_s.assign(n, 0.0);
+    path_kappa.assign(n, 0.0);
+    if (n < 3)
+        return;
+    for (size_t i = 1; i < n; i++)
+        path_s[i] = path_s[i - 1] + std::hypot(_p2c->x_vector[i] - _p2c->x_vector[i - 1],
+                                               _p2c->y_vector[i] - _p2c->y_vector[i - 1]);
+    const double half_window = 2.0;
+    size_t k = 0, j = 0;
+    for (size_t i = 0; i < n; i++){
+        while (k < i && path_s[i] - path_s[k + 1] >= half_window) k++;
+        if (j < i) j = i;
+        while (j + 1 < n && path_s[j] - path_s[i] < half_window) j++;
+        if (k == i || j == i || path_s[i] - path_s[k] < 0.5 || path_s[j] - path_s[i] < 0.5)
+            continue;
+        double h_back = std::atan2(_p2c->y_vector[i] - _p2c->y_vector[k], _p2c->x_vector[i] - _p2c->x_vector[k]);
+        double h_fwd  = std::atan2(_p2c->y_vector[j] - _p2c->y_vector[i], _p2c->x_vector[j] - _p2c->x_vector[i]);
+        double dh = std::remainder(h_fwd - h_back, 2 * M_PI);
+        path_kappa[i] = dh / (0.5 * (path_s[j] - path_s[k]));
+    }
+    // points within half_window of either end (no full window) take the nearest computed value
+    size_t first = 0, last = n - 1;
+    while (first < n && (path_s[first] < half_window)) first++;
+    while (last > 0 && (path_s[n - 1] - path_s[last] < half_window)) last--;
+    if (first <= last && first < n){
+        for (size_t i = 0; i < first; i++) path_kappa[i] = path_kappa[first];
+        for (size_t i = last + 1; i < n; i++) path_kappa[i] = path_kappa[last];
+    }
+}
+
+// p2c.cr_vector[j] = curvature j*0.04 s of travel ahead of the vehicle at its current speed: the spacing the
+// feedforward gain tables were designed for (kff[j] x road curvature j*dt seconds ahead).
+void pathProcessing::fill_curvature_preview(int closest_index){
+    _p2c->cr_vector.clear();
+    size_t n = path_kappa.size();
+    if (ff_gain <= 0.0 || closest_index < 0 || n < 3 || size_t(closest_index) >= n || n != _p2c->x_vector.size())
+        return;
+    const double step = MAX(1.0, double(_vs->speed_x)) * 0.04;
+    const double s0 = path_s[closest_index];
+    size_t i = size_t(closest_index);
+    for (int jj = 0; jj < 150; jj++){
+        double sj = s0 + jj * step;
+        if (sj > path_s[n - 1])
+            break;
+        while (i + 1 < n && path_s[i + 1] < sj) i++;
+        double kap = path_kappa[i];
+        if (i + 1 < n && path_s[i + 1] > path_s[i])
+            kap += (path_kappa[i + 1] - path_kappa[i]) * (sj - path_s[i]) / (path_s[i + 1] - path_s[i]);
+        _p2c->cr_vector.push_back(float(ff_gain * kap));
+    }
 }
 
 void pathProcessing::set_curve_speed(double lat_acc_, double decel_, double min_speed_){

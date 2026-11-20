@@ -170,6 +170,11 @@ void SpeedControl::set_smoothing(float max_speed_, float coast_band_, float thro
     brake_rate    = MAX(0.0f, brake_rate_);
 }
 
+void SpeedControl::set_throttle_fall_rate(float rate)
+{
+    throttle_fall_rate = MAX(0.0f, rate);
+}
+
 void SpeedControl::set_lift_off(float lift_decel_, bool reset_when_dbw_off_)
 {
     lift_decel         = MAX(0.0f, lift_decel_);
@@ -261,6 +266,10 @@ int SpeedControl::run()
     // limit how fast throttle / brake rise (releasing is immediate); estop below is not limited
     if (throttle_rate > 0 && SC.throttle_cmd > throttle_out)
         SC.throttle_cmd = MIN(SC.throttle_cmd, throttle_out + throttle_rate / frequence);
+    // ease off the throttle too (MachE lift-off = regen jolt), but only while no brake is wanted:
+    // a brake request still drops the throttle at once (brake > 0 forces throttle 0 above)
+    if (throttle_fall_rate > 0 && SC.throttle_cmd < throttle_out && SC.brake_cmd <= 0.0f)
+        SC.throttle_cmd = MAX(SC.throttle_cmd, throttle_out - throttle_fall_rate / frequence);
     if (brake_rate > 0 && SC.brake_cmd > brake_out)
         SC.brake_cmd = MIN(SC.brake_cmd, brake_out + brake_rate / frequence);
     throttle_out = SC.throttle_cmd;
