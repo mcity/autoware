@@ -21,6 +21,11 @@ gain tables only; the MKZ tables are kept just for CARLA.
     `lift_decel` 0.35 m/s^2 blends throttle linearly from 0.15 to 0 over that decel range (provisional,
     measured -0.27..-0.48 at 3-7 m/s). `reset_when_dbw_off` true clears the PI integral and pedal rate
     limiters while by-wire is off, so engaging after manual driving doesn't surge. Both default off in the node.
+  - Steering smoothing (2026-11-20, "steering sudden, slow down when steering"): `steer_filter_tau` 0.15 s
+    first-order low-pass on the steering command (tracks the measured wheel while by-wire is off, so engaging
+    doesn't jump), `steer_rate_limit` 3.0 -> 2.0 rad/s, curve speed `curve_lat_acc` 1.0 -> 0.6,
+    `curve_decel` 0.8 -> 0.6, `curve_min_speed` 2.5 -> 2.0. The filter lag is in the gain tables:
+    params.json `tau` 0.244 = actuator 0.094 + filter 0.15. Change one, regenerate with the other.
   - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
     `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
     and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.

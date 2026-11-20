@@ -20,6 +20,7 @@ namespace preview_control
         this->declare_parameter("steering_ratio", 16.0);
         this->declare_parameter("consider_delay_lag", false);
         this->declare_parameter("steer_rate_limit", 0.0);
+        this->declare_parameter("steer_filter_tau", 0.0);
         this->declare_parameter("max_speed", 0.0);
         this->declare_parameter("coast_band", 0.0);
         this->declare_parameter("throttle_rate", 0.0);
@@ -48,6 +49,7 @@ namespace preview_control
         this->get_parameter("steering_ratio", steering_ratio);
         this->get_parameter("consider_delay_lag", consider_delay_lag);
         this->get_parameter("steer_rate_limit", steer_rate_limit);
+        this->get_parameter("steer_filter_tau", steer_filter_tau);
         this->get_parameter("max_speed", max_speed);
         this->get_parameter("coast_band", coast_band);
         this->get_parameter("throttle_rate", throttle_rate);
@@ -99,6 +101,7 @@ namespace preview_control
 
         pathFollow.init(_p2c, _vs, _ctrl, gain_folder, max_ey, max_ephi, steering_ratio, consider_delay_lag);
         pathFollow.set_steer_rate_limit(steer_rate_limit);
+        pathFollow.set_steer_filter_tau(steer_filter_tau);
         speedCtrl.ini(_p2c, _vs, _ctrl, speed_ctrl_kp, speed_ctrl_ki, FREQ);
         speedCtrl.set_smoothing(max_speed, coast_band, throttle_rate, brake_rate, brake_gain);
         speedCtrl.set_lift_off(lift_decel, reset_when_dbw_off);

@@ -52,6 +52,17 @@ int PathFollowing::run()
     PVC.steeringAngle = MAX( MIN_STEERING_ANGLE, 
                         MIN( MAX_STEERING_ANGLE, PVC.wheelAngle * steering_ratio));
 
+    // smooth the command: first-order low-pass (50 Hz). While by-wire is off, track the measured
+    // wheel so engaging continues from where the wheel is instead of jumping.
+    if (steer_filter_tau > 0)
+    {
+        if (!_vs->by_wire_enabled)
+            steer_filt = _vs->steering_wheel_angle;
+        else
+            steer_filt += (0.02f / (steer_filter_tau + 0.02f)) * (PVC.steeringAngle - steer_filt);
+        PVC.steeringAngle = steer_filt;
+    }
+
     // rate limit relative to the last command (50 Hz)
     if (steer_rate_limit > 0)
     {

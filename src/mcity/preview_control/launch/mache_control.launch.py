@@ -52,13 +52,17 @@ def launch_setup(context):
                 {"lift_decel": 0.35},
                 # clear the speed PI integral while by-wire is off (driver driving), so engage doesn't surge
                 {"reset_when_dbw_off": True},
-                # slow for turns: v <= sqrt(curve_lat_acc / curvature) (12 m radius -> 3.5 m/s),
+                # slow for turns: v <= sqrt(curve_lat_acc / curvature) (12 m radius -> 2.7 m/s, 20 m -> 3.5),
                 # reached at curve_decel before the turn, never below curve_min_speed; curve_lat_acc 0 = off
-                {"curve_lat_acc": 1.0},         # m/s^2; Nov 2 drives took turns at up to 1.8
-                {"curve_decel": 0.8},           # m/s^2, mostly within coast_band (regen)
-                {"curve_min_speed": 2.5},       # m/s
-                # steering: max steering-wheel rate, rad/s (~170 deg/s); 0 = off
-                {"steer_rate_limit": 3.0},
+                # 2026-11-20: 1.0 -> 0.6 / 0.8 -> 0.6 / 2.5 -> 2.0 ("slow down when steering")
+                {"curve_lat_acc": 0.6},         # m/s^2; Nov 2 drives took turns at up to 1.8
+                {"curve_decel": 0.6},           # m/s^2, within coast_band (regen), starts slowing earlier
+                {"curve_min_speed": 2.0},       # m/s
+                # steering: max steering-wheel rate, rad/s (~115 deg/s); 0 = off. 2026-11-20: 3.0 -> 2.0
+                {"steer_rate_limit": 2.0},
+                # low-pass on the steering command [s] so it ramps instead of jumping; 0 = off.
+                # Must match params.json tau = actuator 0.094 + this (gain tables are designed with it).
+                {"steer_filter_tau": 0.15},
                 # pose heading bias: first MachE drive showed a steady -0.035 rad ephi on straights
                 {"heading_offset": -0.03},
                 {"heading_lookahead_points": 10},
