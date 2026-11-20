@@ -3,6 +3,19 @@
 Lateral LQR preview controller + PI speed controller, 50 Hz. On the real car it runs with Mach-E
 gain tables only; the MKZ tables are kept just for CARLA.
 
+## Current Mach-E settings (2026-11-20, `launch/mache_control.launch.py` + `data/gain/mache/params.json`)
+| Group | Values |
+|---|---|
+| Speed | `max_speed` 6.0, PI `kp` 1.0 / `ki` 0.3, `coast_band` 0.6, `lift_decel` 0.35, `reset_when_dbw_off` true |
+| Pedals | `throttle_rate` 0.15/s up, `throttle_fall_rate` 0.3/s down (only when no brake is wanted), `brake_rate` 0.5/s, `brake_gain` 0.05 |
+| Curves | `curve_lat_acc` 0.6, `curve_decel` 0.6, `curve_min_speed` 2.0 |
+| Steering | `steer_filter_tau` 0.20 s, `steer_rate_limit` 2.5 rad/s, `feedforward_gain` 0.75, `heading_offset` -0.03 |
+| Gain tables | withdelay, delay 0.04 s, tau 0.294 (= actuator 0.094 + filter 0.20), steering ratio 14.43, r 2 |
+
+Launch values and tables load at start-up: relaunch preview_control after a change. No rebuild is needed (the
+installed launch file is a symlink to the source). The dated notes below explain how each value was reached.
+A rough drive is not always the controller: first check the pose feed (root CLAUDE.md, "Car drivers and sensor health").
+
 ## Launch
 - Real car: `ros2 launch preview_control mache_control.launch.py [gain_variant:=withdelay|withoutdelay] [slope_file:=<path>]`
   - `gain_folder` = `data/gain/mache/<gain_variant>/` (default `withdelay`)
@@ -61,7 +74,8 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
 ## Gain tables
 - `data/gain/mache/{withdelay,withoutdelay}/{Feedback,Feedforward}_dynamic.txt` + `params.json`
   (vehicle params, LQR weights, `_measured`, `_history`). Generated, never hand-edited.
-- Current set is PROVISIONAL: template vehicle values (mass 2300, ratio 16, Cf=Cr=150k, tau 0.15, delay 0.2).
+- Current set (see the table at the top) uses the measured actuator and steering ratio; mass, Iz and Cf/Cr are still
+  template values. History: the first set was PROVISIONAL, with template vehicle values (mass 2300, ratio 16, Cf=Cr=150k, tau 0.15, delay 0.2).
   2026-10-26 retune after the first drive (ey drifted to 1.6 m -> path-departure stops): withdelay r=1 and
   q_ey x4 (k_ey ~ the old MKZ x1.4 setup). Eased to q_ey x2 after the 2nd drive (steering too aggressive). Damping >= 0.33 up to 15 m/s, thin above (not for highway
   speed yet). withoutdelay r=32. `update_from_drive.py --vmax` defaults to 15 m/s.
@@ -96,5 +110,8 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
 - Known bug, left as is: `pathProcess.init()` is called with `max_curvature`/`max_ephi` swapped
   (only affects warning thresholds).
 - Speed-control constants in `sx.hpp` (`VEHICLE_WEIGHT` 1800, `WHEEL_DIAMETER` 0.673, `BRAKETABLE`) are
-  still MKZ values; lateral control does not use them.
+  still MKZ values; lateral control does not use them. `VehicleState.speed_x` from by-wire uses the same 0.673 m
+  wheel and reads ~5.9 % low on the Mach-E (true diameter ~0.713 m).
+- New params added on this branch: `lift_decel`, `reset_when_dbw_off`, `steer_filter_tau`, `throttle_fall_rate`,
+  `feedforward_gain`. All default to 0/false (old behaviour) in the node, so only `mache_control.launch.py` enables them.
 - Build: `colcon build --packages-select preview_control` (C++ changes only).

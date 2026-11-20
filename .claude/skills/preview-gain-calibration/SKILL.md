@@ -41,11 +41,13 @@ so the MachE tables keep the MKZ tuning "feel" on the new plant.
    `gain_variant:=withdelay|withoutdelay` (default withdelay → consider_delay_lag true) and reads
    `steering_ratio` from `params.json`, so regenerating tables keeps the ratio in sync.
    withoutdelay gains go unstable at speed once a 0.2 s delay + lag is present; withdelay stays damped.
-2. `p2c.cr_vector` is never filled (`path_process.cpp`), so **feedforward is currently inactive**;
-   only feedback runs. If someone fills it later, sample curvature every `v·0.04` m ahead.
+2. Feedforward is active since 2026-11-20: `path_process.cpp` fills `p2c.cr_vector` with path curvature every
+   `max(v,1)·0.04` m ahead, scaled by the `feedforward_gain` ROS param (mache launch 0.75; 0 = feedback only).
 3. `path_follow` uses `dERate = v·hE` and `hERate = 0` (not true derivatives). The stability check
    in `gen_preview_gains.py` models exactly this implemented law.
-4. The old `* 1.4` steering hack in `publishCmd()` is gone. August 2026 by-wire drives
+4. 2026-11-20 drive fit (used for the current tables): delay 0.03 s, actuator tau 0.094 s, K 1.00, ratio 14.43.
+   The tables' `tau` also includes the `steer_filter_tau` low-pass (params.json tau = 0.094 + filter).
+   The old `* 1.4` steering hack in `publishCmd()` is gone. August 2026 by-wire drives
    (DBW report cmd vs angle) gave K = 1.00, delay 0.05 s, τ 0.014 s at the ECU, so 1:1 is right.
    That delay excludes the controller → by-wire node latency, so it is not applied. Steering ratio
    must be the measured one, because gains are in front-wheel angle.
@@ -191,7 +193,7 @@ Progressive: 3 → 5 → 8 → 12 → 15 m/s on a known route, safety driver rea
 plus `/mcity/vehicle_planning`. Pass criteria: |ey| < 0.3 m on straights and < 0.5 m in curves,
 no steering oscillation (look at steer_state for a sustained 0.5–2 Hz wobble), no estop from
 path departure. If oscillating at speed: increase `r` (softer) for that variant or check delay;
-if sluggish/cutting corners: decrease `r`, and consider wiring the feedforward (`cr_vector`).
+if sluggish/cutting corners: decrease `r`, or adjust `feedforward_gain` (cutting curves: lower it; running wide: raise it).
 
 ## Tuning notes
 - Weights are `q(v) = q · (v/10)^speed_exp[q]`, R = `r`. Uniformly scaling all q's by c equals scaling r by 1/c.

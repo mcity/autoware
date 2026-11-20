@@ -35,15 +35,17 @@ MAKEFLAGS=-j6 colcon build --symlink-install --parallel-workers 6 --cmake-args -
   source /opt/ros/jazzy/setup.bash
   source ~/autoware/install/setup.bash
   export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-  export CYCLONEDDS_URI=file://$HOME/autoware/cyclonedds.xml
+  export CYCLONEDDS_URI=file:///etc/ros/cyclonedds.xml   # car; else file://$HOME/autoware/cyclonedds.xml
   ```
 - `CYCLONEDDS_URI` is required. Without multicast (Wi-Fi, or `lo` without the multicast flag) CycloneDDS allows
   only 10 participants per machine. Autoware starts 30+, so later nodes die with
   `Failed to find a free participant index for domain 0` / `RCLError: error creating node`.
   [cyclonedds.xml](cyclonedds.xml) binds to loopback and allows 200 participants. It is single-machine only:
   another machine (e.g. RViz on a laptop) will not see the topics.
-- Real car only: install the Dataspeed CAN driver with `sudo apt-get install -y ros-jazzy-ds-dbw`. Start it with
-  `ros2 launch ds_dbw_can dbw.launch.xml`.
+- On the car, the drivers' install script copies it to `/etc/ros/cyclonedds.xml`. The driver service and every shell
+  must use that **same file**: when the stack and the drivers use different DDS configs, they don't see each other's
+  topics. The `~/mcity_demos/run_*_demo.sh` scripts export it (and fall back to `~/autoware/cyclonedds.xml` with a warning).
+- Real car only: the sensor/DBW drivers are not started by hand. See "Car drivers and sensor health" below.
 
 Verify in a new terminal:
 ```bash
@@ -85,10 +87,59 @@ ViGrade's command when the Redis control-override `FLAG` is `"True"`, and Autowa
 `FLAG` is `"False"` **or missing**. The demo scripts run `redis-cli flushall`, so they start under Autoware control.
 Ask the user where to get it if the real-car chain is needed.
 
+## Car drivers and sensor health
+- `ros2-autostart.service` (systemd, starts at boot; `/usr/local/bin/ros2-startup.sh`) sources `~/ros_ws/install`
+  and launches `ds_dbw_can dbw.launch.xml`, `oxts run.py` (OXTS INS) and `rslidar_sdk start.py`, with
+  `CYCLONEDDS_URI=file:///etc/ros/cyclonedds.xml`. That code and its docs belong to `~/vehicle-ros-drivers`
+  (`jazzy/README.md`); the OXTS driver is the upstream `oxts_ros2_driver` clone in `~/ros_ws/src`.
+  Restart: `sudo systemctl restart ros2-autostart.service`. The user has to run sudo.
+- **OXTS `pub_path_rate` must stay 0** (`~/ros_ws/src/oxts_ros2_driver/oxts_ins/config/default.yaml`; the upstream
+  default 100 is wrong for us). With 100, `/ins/path` republishes its whole history every 10 ms and grows forever.
+  On 2026-11-20 oxts_ins reached 97 % CPU after ~2 h, and `/ins/imu` fell from 100 Hz to ~10 Hz and `/ins/nav_sat_fix`
+  to ~3 Hz with 1 s gaps. `gnss_decoder` publishes `/mcity/cav_pose` once per fix, so the pose froze for up to 1 s
+  and then jumped 4-6 m. preview_control then weaved at its steering rate limit and left the path (1.97 m).
+  A service restart only clears it temporarily.
+- Before tuning or blaming the controller, check that the inputs are healthy (with `CYCLONEDDS_URI` set):
+  `/ins/imu` and `/ins/odometry` ~100 Hz, `/ins/nav_sat_fix` ~50 Hz, `/mcity/cav_pose` and `/mcity/vehicle_state`
+  ~50 Hz, max gap < 50 ms, `oxts_ins` ~5 % CPU in `top`. Drives recorded before 2026-11-20 12:47 had a degraded pose
+  feed, so don't use them to judge controller tuning.
+- `cav_pose` has no dead-reckoning between fixes: it is only as smooth as `/ins/nav_sat_fix`.
+- No GNSS fix (`/ins/nav_sat_fix` missing) leaves Autoware waiting for localization initialization. Check the INS first.
+
 ## Mach-E facts
 - Steering engages (`report.enabled`) only when `SteeringCmd.control_mode = CONTROL_LANE_KEEP`.
 - `VehicleState.yaw_rate` is always 0 on the Mach-E. Derive yaw rate from steering angle and speed instead.
 - The brake command is 0..1, which by-wire sends as 0..100 %. Any brake > 0 cuts throttle.
+- Zero throttle is regen braking, about -0.3 m/s^2 (not coasting). preview_control's `lift_decel` handles this.
+- `VehicleState.speed_x` = wheel rad/s x 0.3365 m (MKZ wheel radius) reads ~5.9 % low against the INS. The Mach-E
+  wheel diameter is ~0.713 m. Not changed yet: the controller tuning and `max_speed` were done with the low reading.
+- Measured steering (2026-11-20): delay 0.03 s, actuator lag 0.094 s, tracks the command 1:1, steering ratio 14.43,
+  understeer 1.4 deg/g.
+
+## Route scripts and the mission planner (`~/mcity_demos/src/mcity_vigrade`)
+- Route scripts send `SetRoutePoints` (goal + waypoints, map frame) and then switch to autonomous mode.
+  `mcity_full_route1` (2026-11-20, from the manual baseline drive around the facility) chains loop-free segments
+  A -> B: on `ARRIVED_GOAL` it waits `hand_over_wait` (3 s), calls `/planning/mission_planning/clear_route`, and
+  sets the next segment. `laps` 0 = endless. Only the route script does this; no Autoware module was changed.
+- The mission planner rejects a route when:
+  - the goal footprint (sample_vehicle: front 3.79 m and rear 1.1 m from the rear axle, half width 0.948 m)
+    leaves the goal lanelet: "Goal's footprint exceeds lane". Put goals on straight lanelet centrelines.
+  - any lanelet repeats in the route, counting same-direction lateral neighbours: "Loop detected within route!".
+    So a closed lap cannot be a single route.
+  - a route is already set: `SetRoutePoints` works only in state UNSET, so clear the route after `ARRIVED_GOAL`.
+- Map frame: map xy = UTM(lat, lon) + (-277497.10, -4686518.71); origin LocalCartesianUTM (42.299138, -83.699245).
+  The Autoware pose is the vehicle centre shifted 1.5 m back (rear axle).
+- Known issue: the route scripts never subscribe to `/mcity/vehicle_state`, so their by-wire checks see no data.
+
+## Recording drives
+- Record every test in its own bag under `~/bags` with `CYCLONEDDS_URI` set:
+  `ros2 bag record -o ~/bags/<name>_$(date +%Y%m%d_%H%M%S) --include-hidden-topics --regex
+  "^/(mcity/.*|vehicle/.*|ins/(odometry|nav_sat_fix|imu)|autoware/state|rosout|planning/scenario_planning/trajectory|planning/mission_planning/route|system/operation_mode/state)$"`.
+  Stop it with SIGINT or SIGTERM. A recorder started with `nohup ... &` ignores SIGINT.
+- Calibration drives: the skill's `record_drive.sh`, which saves to `~/mache_calib/drives/bags`.
+- References from 2026-11-20 in `~/bags`: `baseline_manual_20261120_112617` (in `~/mache_calib/drives/bags`) is the
+  manual drive around the facility. `highway_clean_20261120_125120` is the first clean-INS autonomous highway run:
+  straights 0.14 m mean |ey|, curves cut ~0.4 m.
 
 ## Shadowing (common source of "my change did nothing")
 Several workspaces install packages or libraries with the same names. Whichever is sourced **last** wins.
