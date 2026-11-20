@@ -8,7 +8,7 @@ gain tables only; the MKZ tables are kept just for CARLA.
 |---|---|
 | Speed | `max_speed` 6.0, PI `kp` 1.0 / `ki` 0.3, `coast_band` 0.6, `lift_decel` 0.35, `reset_when_dbw_off` true |
 | Pedals | `throttle_rate` 0.15/s up, `throttle_fall_rate` 0.3/s down (only when no brake is wanted), `brake_rate` 0.5/s, `brake_gain` 0.05 |
-| Curves | `curve_lat_acc` 0.6, `curve_decel` 0.6, `curve_min_speed` 2.0 |
+| Curves | `curve_lat_acc` 0.6, `curve_decel` 0.6, `curve_min_speed` 2.0, `curve_lookahead` 1.5 s |
 | Steering | `steer_filter_tau` 0.20 s, `steer_rate_limit` 2.5 rad/s, `feedforward_gain` 0.75, `heading_offset` -0.03 |
 | Gain tables | withdelay, delay 0.04 s, tau 0.294 (= actuator 0.094 + filter 0.20), steering ratio 14.43, r 2 |
 
@@ -47,6 +47,11 @@ A rough drive is not always the controller: first check the pose feed (root CLAU
     mean |ey| 0.14 m, but curves were cut ~0.4 m to the inside (80 % of curve time, both directions) ->
     feedforward_gain 1.0 -> 0.75. Drives before 12:47 that day had a 2-10 Hz cav_pose with up to 1 s freezes,
     so judge tunings only on later drives.
+  - Same drive, curve misses (|ey| 0.9-1.15 m): the curve speed limit was right but applied only at the closest
+    point, and the speed loop lags ~1.5 s (regen + light brake), so the car entered 9-11 m bends at ~4 m/s
+    (1.5 m/s^2 vs the 0.6 target) and even accelerated just before one. New `curve_lookahead` 1.5 s: the target
+    is the lowest curve limit within the next 1.5 s of path. The wheel also led the path curvature by ~0.2 s
+    (corner cutting), which feedforward_gain 0.75 addresses.
   - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
     `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
     and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.
@@ -113,5 +118,5 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
   still MKZ values; lateral control does not use them. `VehicleState.speed_x` from by-wire uses the same 0.673 m
   wheel and reads ~5.9 % low on the Mach-E (true diameter ~0.713 m).
 - New params added on this branch: `lift_decel`, `reset_when_dbw_off`, `steer_filter_tau`, `throttle_fall_rate`,
-  `feedforward_gain`. All default to 0/false (old behaviour) in the node, so only `mache_control.launch.py` enables them.
+  `feedforward_gain`, `curve_lookahead`. All default to 0/false (old behaviour) in the node, so only `mache_control.launch.py` enables them.
 - Build: `colcon build --packages-select preview_control` (C++ changes only).

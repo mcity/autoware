@@ -209,6 +209,10 @@ void pathProcessing::set_curve_speed(double lat_acc_, double decel_, double min_
     curve_min_speed = min_speed_;
 }
 
+void pathProcessing::set_curve_lookahead(double seconds_){
+    curve_lookahead = MAX(0.0, seconds_);
+}
+
 void pathProcessing::compute_curve_speed(){
     curve_vmax.clear();
     size_t n = _p2c->x_vector.size();
@@ -344,9 +348,19 @@ double pathProcessing::get_desired_velocity(int closest_index){
     }
 
     // curve limit last: the search above may pick a faster point beyond the curve
-    if (size_t(closest_index) < curve_vmax.size() && curve_vmax[closest_index] < desired_velocity){
-        RCLCPP_INFO(rclcpp::get_logger("path_process"), "curve limit %f (planned %f)", curve_vmax[closest_index], desired_velocity);
-        desired_velocity = curve_vmax[closest_index];
+    if (closest_index >= 0 && size_t(closest_index) < curve_vmax.size()){
+        double vlim = curve_vmax[closest_index];
+        // look ahead: the speed loop lags ~1-1.5 s (regen + gentle braking), so start the slowdown that much earlier
+        double horizon = MAX(current_velocity, 1.0) * curve_lookahead, ahead = 0.0;
+        for (size_t i = closest_index + 1; i < curve_vmax.size() && i < _p2c->x_vector.size(); i++){
+            ahead += std::hypot(_p2c->x_vector[i] - _p2c->x_vector[i - 1], _p2c->y_vector[i] - _p2c->y_vector[i - 1]);
+            if (ahead > horizon) break;
+            vlim = MIN(vlim, curve_vmax[i]);
+        }
+        if (vlim < desired_velocity){
+            RCLCPP_INFO(rclcpp::get_logger("path_process"), "curve limit %f (planned %f)", vlim, desired_velocity);
+            desired_velocity = vlim;
+        }
     }
 
     return desired_velocity;

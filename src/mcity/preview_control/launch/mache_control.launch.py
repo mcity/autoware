@@ -59,6 +59,9 @@ def launch_setup(context):
                 {"curve_lat_acc": 0.6},         # m/s^2; Nov 2 drives took turns at up to 1.8
                 {"curve_decel": 0.6},           # m/s^2, within coast_band (regen), starts slowing earlier
                 {"curve_min_speed": 2.0},       # m/s
+                # use the lowest curve limit within the next 1.5 s: the speed loop lags ~1.5 s, and without this
+                # the car entered 9-11 m bends at ~4 m/s (1.5 m/s^2) instead of 2.6 (2026-11-20 12:51 drive)
+                {"curve_lookahead": 1.5},       # s
                 # steering: max steering-wheel rate, rad/s (~115 deg/s); 0 = off. 2026-11-20: 3.0 -> 2.0
                 {"steer_rate_limit": 2.5},      # 2026-11-20: 2.0 was too slow for the sharp turns (path-departure stop)
                 # low-pass on the steering command [s] so it ramps instead of jumping; 0 = off.

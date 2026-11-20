@@ -90,6 +90,7 @@ private:
     double curve_lat_acc            = 0.0;
     double curve_decel              = 1.0;
     double curve_min_speed          = 0.0;
+    double curve_lookahead          = 0.0;
 
     // GUI_Set_S guiSet;
     pathProcessing pathProcess;

@@ -38,6 +38,7 @@ public:
     void resampling();
     void process_path(double desired_time_resolution, double preview_time);
     void set_curve_speed(double lat_acc_, double decel_, double min_speed_);
+    void set_curve_lookahead(double seconds_);
     // Curvature preview for the feedforward (p2c.cr_vector); gain 0 = off (cr_vector stays empty).
     void set_feedforward(double gain) { ff_gain = gain > 0 ? gain : 0.0; }
 
@@ -70,6 +71,9 @@ private:
     double curve_lat_acc   = 0.0; // m/s^2
     double curve_decel     = 1.0; // m/s^2
     double curve_min_speed = 0.0; // m/s
+    // use the lowest curve limit within this many seconds ahead (at the current speed), so the slow speed loop
+    // starts braking early enough; 0 = limit at the closest point only
+    double curve_lookahead = 0.0; // s
     std::vector<double> curve_vmax; // per path point, filled by compute_curve_speed()
 
     // feedforward: signed path curvature (left +, 1/m) per processed path point, and its arc length

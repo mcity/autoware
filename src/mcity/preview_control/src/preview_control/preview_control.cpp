@@ -33,6 +33,7 @@ namespace preview_control
         this->declare_parameter("curve_lat_acc", 0.0);
         this->declare_parameter("curve_decel", 1.0);
         this->declare_parameter("curve_min_speed", 0.0);
+        this->declare_parameter("curve_lookahead", 0.0);
         this->declare_parameter("trajectory_abort_size", 0);
         this->declare_parameter("trajectory_loose_abort_size", 0);
 
@@ -64,6 +65,7 @@ namespace preview_control
         this->get_parameter("curve_lat_acc", curve_lat_acc);
         this->get_parameter("curve_decel", curve_decel);
         this->get_parameter("curve_min_speed", curve_min_speed);
+        this->get_parameter("curve_lookahead", curve_lookahead);
         this->get_parameter("trajectory_abort_size", trajectory_abort_size);
         this->get_parameter("trajectory_loose_abort_size", trajectory_loose_abort_size);
 
@@ -102,6 +104,7 @@ namespace preview_control
             lateral_offset,
             slope_folder);
         pathProcess.set_curve_speed(curve_lat_acc, curve_decel, curve_min_speed);
+        pathProcess.set_curve_lookahead(curve_lookahead);
         pathProcess.set_feedforward(feedforward_gain);
 
         pathFollow.init(_p2c, _vs, _ctrl, gain_folder, max_ey, max_ephi, steering_ratio, consider_delay_lag);
