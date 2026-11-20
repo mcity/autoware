@@ -77,6 +77,9 @@ private:
     double steering_ratio           = 16.0;
     bool   consider_delay_lag       = false;
     double steer_rate_limit         = 0.0;
+    double steer_rate_limit_low     = 0.0;
+    double steer_rate_v_low         = 2.5;
+    double steer_rate_v_high        = 4.5;
     double steer_filter_tau         = 0.0;
     double feedforward_gain         = 0.0;
     double max_speed                = 0.0;

@@ -64,6 +64,11 @@ def launch_setup(context):
                 {"curve_lookahead": 1.5},       # s
                 # steering: max steering-wheel rate, rad/s (~115 deg/s); 0 = off. 2026-11-20: 3.0 -> 2.0
                 {"steer_rate_limit": 2.5},      # 2026-11-20: 2.0 was too slow for the sharp turns (path-departure stop)
+                # faster wheel at low speed only: 4-9 m corners at ~2 m/s need ~240 deg/s and ran ~0.9 m wide at
+                # 143 deg/s (13:08 drive). 3.6 rad/s = 206 deg/s, the manual baseline's peak. Blended 2.5 -> 4.5 m/s.
+                {"steer_rate_limit_low": 3.6},
+                {"steer_rate_v_low": 2.5},      # m/s
+                {"steer_rate_v_high": 4.5},     # m/s
                 # low-pass on the steering command [s] so it ramps instead of jumping; 0 = off.
                 # Must match params.json tau = actuator 0.094 + this (gain tables are designed with it).
                 {"steer_filter_tau": 0.20},

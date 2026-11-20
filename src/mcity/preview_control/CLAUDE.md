@@ -9,7 +9,7 @@ gain tables only; the MKZ tables are kept just for CARLA.
 | Speed | `max_speed` 6.0, PI `kp` 1.0 / `ki` 0.3, `coast_band` 0.6, `lift_decel` 0.35, `reset_when_dbw_off` true |
 | Pedals | `throttle_rate` 0.15/s up, `throttle_fall_rate` 0.3/s down (only when no brake is wanted), `brake_rate` 0.5/s, `brake_gain` 0.05 |
 | Curves | `curve_lat_acc` 0.6, `curve_decel` 0.6, `curve_min_speed` 2.0, `curve_lookahead` 1.5 s |
-| Steering | `steer_filter_tau` 0.20 s, `steer_rate_limit` 2.5 rad/s, `feedforward_gain` 0.75, `heading_offset` -0.03 |
+| Steering | `steer_filter_tau` 0.20 s, `steer_rate_limit` 2.5 rad/s (3.6 at <= 2.5 m/s via `steer_rate_limit_low`, blended to 4.5 m/s), `feedforward_gain` 0.75, `heading_offset` -0.03 |
 | Gain tables | withdelay, delay 0.04 s, tau 0.294 (= actuator 0.094 + filter 0.20), steering ratio 14.43, r 2 |
 
 Launch values and tables load at start-up: relaunch preview_control after a change. No rebuild is needed (the
@@ -52,6 +52,11 @@ A rough drive is not always the controller: first check the pose feed (root CLAU
     (1.5 m/s^2 vs the 0.6 target) and even accelerated just before one. New `curve_lookahead` 1.5 s: the target
     is the lowest curve limit within the next 1.5 s of path. The wheel also led the path curvature by ~0.2 s
     (corner cutting), which feedforward_gain 0.75 addresses.
+  - 13:08 drive (both fixes): curves mean |ey| 0.56 -> 0.25 m, inside bias gone, curve a_y p95 0.73 m/s^2. Left:
+    0.84-0.94 m wide in 4-9 m corners at ~2 m/s, where the command sat at the 143 deg/s rate limit (needed ~240).
+    New speed-scheduled limit: `steer_rate_limit_low` 3.6 rad/s (206 deg/s = the manual baseline's peak) at or
+    below `steer_rate_v_low` 2.5 m/s, blended to `steer_rate_limit` at `steer_rate_v_high` 4.5 m/s. The lateral sim
+    can't judge this (its linear model under-asks the wheel in 4 m corners), so check it on the car.
   - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
     `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
     and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.
@@ -118,5 +123,5 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
   still MKZ values; lateral control does not use them. `VehicleState.speed_x` from by-wire uses the same 0.673 m
   wheel and reads ~5.9 % low on the Mach-E (true diameter ~0.713 m).
 - New params added on this branch: `lift_decel`, `reset_when_dbw_off`, `steer_filter_tau`, `throttle_fall_rate`,
-  `feedforward_gain`, `curve_lookahead`. All default to 0/false (old behaviour) in the node, so only `mache_control.launch.py` enables them.
+  `feedforward_gain`, `curve_lookahead`, `steer_rate_limit_low` (+ `steer_rate_v_low/high`). All default to 0/false (old behaviour) in the node, so only `mache_control.launch.py` enables them.
 - Build: `colcon build --packages-select preview_control` (C++ changes only).

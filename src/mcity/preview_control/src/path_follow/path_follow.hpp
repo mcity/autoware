@@ -68,6 +68,9 @@ public:
 
     int run();
     void set_steer_rate_limit(float rate) { steer_rate_limit = rate; }
+    // faster steering allowed at low speed: `low` rad/s at or below v_low, blended to steer_rate_limit at v_high
+    void set_steer_rate_low_speed(float low, float v_low, float v_high)
+    { steer_rate_limit_low = low; steer_rate_v_low = v_low; steer_rate_v_high = MAX(v_high, v_low + 0.1f); }
     void set_steer_filter_tau(float tau) { steer_filter_tau = tau > 0 ? tau : 0.0f; }
 
 private:
@@ -86,6 +89,9 @@ private:
     float steering_ratio = 16.0f;    // steering wheel / front wheel angle
     bool consider_delay_lag = false;
     float steer_rate_limit = 0.0f;   // max steering-wheel rate [rad/s], 0 = no limit // true: use withdelay gains (delay buffer + measured steering feedback)
+    float steer_rate_limit_low = 0.0f; // rate limit at low speed [rad/s]; 0 = use steer_rate_limit at all speeds
+    float steer_rate_v_low = 2.5f;     // [m/s] at or below: steer_rate_limit_low
+    float steer_rate_v_high = 4.5f;    // [m/s] at or above: steer_rate_limit
     // First-order low-pass on the steering-wheel command [s], 0 = off. Its lag must be included in the
     // gain tables' tau (params.json tau = actuator tau + this), or the loop loses damping.
     float steer_filter_tau = 0.0f;

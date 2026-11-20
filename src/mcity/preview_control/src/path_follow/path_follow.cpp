@@ -66,7 +66,15 @@ int PathFollowing::run()
     // rate limit relative to the last command (50 Hz)
     if (steer_rate_limit > 0)
     {
-        float step = steer_rate_limit / 50.0f;
+        float rate = steer_rate_limit;
+        if (steer_rate_limit_low > steer_rate_limit)
+        {
+            // sharp low-speed corners need ~200+ deg/s of wheel; keep the smooth limit at road speed
+            float a = (_vs->speed_x - steer_rate_v_low) / (steer_rate_v_high - steer_rate_v_low);
+            a = MAX(0.0f, MIN(1.0f, a));
+            rate = steer_rate_limit_low + a * (steer_rate_limit - steer_rate_limit_low);
+        }
+        float step = rate / 50.0f;
         PVC.steeringAngle = MAX(_ctrl->steering - step, MIN(_ctrl->steering + step, PVC.steeringAngle));
     }
 
