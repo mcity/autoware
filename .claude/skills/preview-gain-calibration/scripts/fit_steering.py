@@ -45,6 +45,9 @@ def load_run(d, min_seg=3.0, min_pp_deg=5.0):
     """-> list of (t, cmd, y) segments of usable, excited by-wire data."""
     ctrl = load_csv(os.path.join(d, "__mcity__vehicle_control.csv"))
     vs = load_csv(os.path.join(d, "__mcity__vehicle_state.csv"))
+    if len(ctrl.get("t", [])) == 0 or len(vs.get("t", [])) == 0:
+        print(f"{os.path.basename(os.path.normpath(d))}: no by-wire steering commands (manual drive) - skipped")
+        return []
     t0, t1 = max(ctrl["t"][0], vs["t"][0]), min(ctrl["t"][-1], vs["t"][-1])
     t = np.arange(t0, t1, GRID_DT)
     # zero-order hold for the command, linear interpolation for the measurement

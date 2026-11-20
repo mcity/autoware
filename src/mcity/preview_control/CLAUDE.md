@@ -55,7 +55,9 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
   2026-11-20: steering weaved in turns (S-overshoot, |ey| 1.3-1.7 m). Drive fit: delay 0.03 s, tau 0.094 s, K 1.00,
   so the old tables (designed for delay 0.2 / tau 0.15) had damping ~0.20 on the real car: they treated 5 already-applied
   commands as still pending (k_d spread over all buffer slots). Regenerated with delay 0.04 (1 step), tau 0.094,
-  withdelay r=2: damping 0.76 at 6 m/s, k_ey 71 % of before. Ratio and Cf/Cr are still template values.
+  withdelay r=2: damping 0.76 at 6 m/s, k_ey 71 % of before. Same day, manual baseline drive: steering ratio
+  16 -> 14.43 (11 steady windows, 2.4-9.1 m/s; Kus 1.4 deg/g). The tables are in front-wheel angle, so only
+  params.json changed (old 16 over-commanded the wheel by ~11 %). Cf/Cr still template (fit 39k rejected).
   `update_from_drive.py` rejects delay < 0.04 and judges stability on params.json, so it picked r=0.5 against the
   old 0.2 s model: check the installed table on the measured plant (`closed_loop_radius`) before trusting its r.
 - Regenerate / calibrate with the skill in `~/autoware/.claude/skills/preview-gain-calibration/` (SKILL.md):

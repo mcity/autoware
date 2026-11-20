@@ -46,7 +46,9 @@ def derive_mcity(out_dir):
     ws_path = os.path.join(out_dir, "__vehicle__wheel_speeds.csv")
     if os.path.exists(ws_path):
         ws = read_csv(ws_path)
-        avg = np.mean([ws[k] for k in ("front_left", "front_right", "rear_left", "rear_right")], axis=0)
+        # ds_dbw_msgs >= 2.4.3 (apt) renamed the rad/s fields: front_left -> front_left_rad_s, ...
+        sfx = "_rad_s" if "front_left_rad_s" in ws else ""
+        avg = np.mean([ws[k + sfx] for k in ("front_left", "front_right", "rear_left", "rear_right")], axis=0)
         speed = np.interp(t, ws["t"], np.abs(avg)) * WHEEL_RADIUS
     override = np.maximum(rep["override_active"], rep.get("override_other", 0 * t))
     with open(os.path.join(out_dir, "__mcity__vehicle_state.csv"), "w", newline="") as f:
