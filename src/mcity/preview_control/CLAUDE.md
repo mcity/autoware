@@ -57,6 +57,18 @@ A rough drive is not always the controller: first check the pose feed (root CLAU
     New speed-scheduled limit: `steer_rate_limit_low` 3.6 rad/s (206 deg/s = the manual baseline's peak) at or
     below `steer_rate_v_low` 2.5 m/s, blended to `steer_rate_limit` at `steer_rate_v_high` 4.5 m/s. The lateral sim
     can't judge this (its linear model under-asks the wheel in 4 m corners), so check it on the car.
+  - 13:18 drive (low-speed rate limit): curves mean |ey| 0.24 m, p95 0.50 (was 0.63), max 0.80 (was 0.94); the wheel
+    used up to 206 deg/s at low speed; no inside/outside bias, no timing lead. Straights unchanged.
+    Bags: `~/bags/highway_clean_20261120_125120` (before), `ff075_20261120_130326`, `steer_lowspeed_20261120_131707`.
+
+## Known open issues (2026-11-20)
+- **Goal overrun**: the 13:18 drive stopped 7.6 m past the end of the path (plan vd -> 0). The car was still at
+  ~2.5 m/s 4 s before the end, brake stayed ~0.06 (`brake_gain` 0.05, regen first), and the 0.22 stop hold came
+  only after passing the end. Nothing in the speed loop looks at the distance left to the stop point. Planned fix:
+  when the path ends within reach, brake for v^2 / (2 * distance left). Until then the safety driver stops the car.
+- **Hesitant start**: right after engaging, Autoware planned 0.25 m/s, the PI raised throttle to 0.45 over ~4 s while
+  the car stayed at ~0.6 m/s for ~6 s; then the plan rose and the car went 0.7 -> 3.9 m/s in ~3 s with throttle
+  <= 0.2. Not explained yet (check `/vehicle/throttle/report` in that bag, 13:18:45-13:18:55).
   - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
     `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
     and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.

@@ -139,7 +139,8 @@ Ask the user where to get it if the real-car chain is needed.
 - Calibration drives: the skill's `record_drive.sh`, which saves to `~/mache_calib/drives/bags`.
 - References from 2026-11-20 in `~/bags`: `baseline_manual_20261120_112617` (in `~/mache_calib/drives/bags`) is the
   manual drive around the facility. `highway_clean_20261120_125120` is the first clean-INS autonomous highway run:
-  straights 0.14 m mean |ey|, curves cut ~0.4 m.
+  straights 0.14 m mean |ey|, curves cut ~0.4 m. `steer_lowspeed_20261120_131707` is the run with all of that day's
+  preview_control fixes (curves 0.24 m mean |ey|). Open issues are listed in `src/mcity/preview_control/CLAUDE.md`.
 
 ## Shadowing (common source of "my change did nothing")
 Several workspaces install packages or libraries with the same names. Whichever is sourced **last** wins.
