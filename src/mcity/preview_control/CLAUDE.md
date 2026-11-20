@@ -30,6 +30,10 @@ gain tables only; the MKZ tables are kept just for CARLA.
     turn), and the driver still felt sudden steering/throttle: steer_rate_limit 2.5, steer_filter_tau 0.20
     (params.json tau 0.294), feedforward_gain 1.0, throttle_rate 0.15, new `throttle_fall_rate` 0.3 (throttle
     eases off unless a brake is wanted; brake requests still cut it at once).
+  - 2026-11-20 12:51, first drive with a healthy INS feed (OXTS `pub_path_rate` fix, cav_pose 50 Hz): straights
+    mean |ey| 0.14 m, but curves were cut ~0.4 m to the inside (80 % of curve time, both directions) ->
+    feedforward_gain 1.0 -> 0.75. Drives before 12:47 that day had a 2-10 Hz cav_pose with up to 1 s freezes,
+    so judge tunings only on later drives.
   - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
     `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
     and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.
@@ -82,7 +86,7 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
 ## Code facts
 - Control law (path_follow.cpp): `tan(delta) = -K*[ey, v*ephi, ephi, 0, delta_meas, cmd buffer] - kff*curvature`;
   `dERate = v*hE`, `hERate = 0`; 5-slot command buffer updated every 0.04 s.
-- Feedforward (curvature preview) is active since 2026-11-20 when `feedforward_gain` > 0 (mache launch: 1.0):
+- Feedforward (curvature preview) is active since 2026-11-20 when `feedforward_gain` > 0 (mache launch: 0.75):
   `path_process` computes signed path curvature (left +, 2 m chord window) and fills `p2c.cr_vector` with it
   every `max(v,1)*0.04` m ahead of the closest point; `path_follow` sums all 150 kff columns (was 50,
   which over-steered ~15 %). Replay check of the 2026-11-20 drive: FF turns the same way, ~1 s earlier.

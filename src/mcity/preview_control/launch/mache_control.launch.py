@@ -66,7 +66,8 @@ def launch_setup(context):
                 {"steer_filter_tau": 0.20},
                 # curvature preview (feedforward) from the path, scaled by this; 0 = off (feedback only, turns late).
                 # Starts steering before a turn instead of reacting after ey builds up. 2026-11-20: enabled.
-                {"feedforward_gain": 1.0},
+                # 1.0 cut every curve ~0.4 m to the inside (clean-INS drive 12:51); 0.75 = centre it.
+                {"feedforward_gain": 0.75},
                 # pose heading bias: first MachE drive showed a steady -0.035 rad ephi on straights
                 {"heading_offset": -0.03},
                 {"heading_lookahead_points": 10},
