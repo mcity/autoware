@@ -80,8 +80,17 @@ void SpeedControl::get_padel_opening(float acc, float speed, float & throttle, f
     }
 
     // step 3: computing brake
+    // step 2b: just below the lowest table throttle, blend down to 0 instead of jumping 0.15 -> 0.
+    // On the MachE zero throttle means regen (~0.3 m/s^2), so the jump caused a surge/regen limit cycle.
+    if (acc < accT[0] && lift_decel > 0 && (accT[0] - acc) < lift_decel)
+    {
+        throttle = THROTTLETABLE[0] * (1.0f - (accT[0] - acc) / lift_decel);
+        brake    = 0.0f;
+        return;
+    }
+
     if (acc < accT[0]) // need more brake, i.e., coast is not enough
-    {        
+    {
         throttle = 0.0f;
         if (accT[0] - acc < coast_band)
             brake = 0.0f;   // lift off, regen slows the car
@@ -161,6 +170,12 @@ void SpeedControl::set_smoothing(float max_speed_, float coast_band_, float thro
     brake_rate    = MAX(0.0f, brake_rate_);
 }
 
+void SpeedControl::set_lift_off(float lift_decel_, bool reset_when_dbw_off_)
+{
+    lift_decel         = MAX(0.0f, lift_decel_);
+    reset_when_dbw_off = reset_when_dbw_off_;
+}
+
 int SpeedControl::run()
 {
     if (_p2c == NULL || _vs == NULL || _ctrl == NULL ){
@@ -180,6 +195,15 @@ int SpeedControl::run()
 
     //step 2: speed error
     SC.vErr = SC.speed_x-SC.vd;
+
+    // While the driver drives (by-wire off) the commands go nowhere; don't let the integral wind up,
+    // and restart the pedal rate limiters from 0, so engaging starts smoothly instead of surging.
+    if (reset_when_dbw_off && !_vs->by_wire_enabled)
+    {
+        SC.errIntg   = 0.0f;
+        throttle_out = 0.0f;
+        brake_out    = 0.0f;
+    }
 
     //step 3: speed control rule
     SC.acc_cmd = speed_pid_ctrl();

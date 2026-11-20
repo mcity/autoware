@@ -15,6 +15,12 @@ gain tables only; the MKZ tables are kept just for CARLA.
     `max_speed` 6.0 caps the planned speed. Speed PI `kp` 1.0 / `ki` 0.3 (MKZ: 1.8 / 0.6).
     `coast_band` 0.6 m/s^2: lift off (regen) before braking. `throttle_rate` 0.3/s and `brake_rate` 0.5/s
     cap pedal rise. `steer_rate_limit` 3.0 rad/s. All of these default to 0 = off in the node.
+  - Lift-off blend (2026-11-20, after "brakes in between / surging" at the 6 m/s cap): the MKZ throttle table's
+    lowest entry is 0.15, so any request below it cut throttle 0.15 -> 0, and on the MachE 0 = regen
+    (~-0.3 m/s^2). Result: a 2.4 s surge/regen limit cycle (5.75 <-> 6.27 m/s) with brake_cmd = 0.
+    `lift_decel` 0.35 m/s^2 blends throttle linearly from 0.15 to 0 over that decel range (provisional,
+    measured -0.27..-0.48 at 3-7 m/s). `reset_when_dbw_off` true clears the PI integral and pedal rate
+    limiters while by-wire is off, so engaging after manual driving doesn't surge. Both default off in the node.
   - MachE brake cmd is 0..1 = 0..100 % (by-wire sends brake_cmd*100, and any brake > 0 cuts throttle).
     `brake_gain` 0.05: brake = 0.05 * decel [m/s^2]. The MKZ BRAKETABLE starts at 0.184 (= 18 % on the MachE)
     and is used only when brake_gain = 0. set_stop/estop keep their fixed 0.22-0.235 holds.

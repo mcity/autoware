@@ -82,6 +82,8 @@ private:
     double throttle_rate            = 0.0;
     double brake_rate               = 0.0;
     double brake_gain               = 0.0;
+    double lift_decel               = 0.0;
+    bool   reset_when_dbw_off       = false;
     double curve_lat_acc            = 0.0;
     double curve_decel              = 1.0;
     double curve_min_speed          = 0.0;

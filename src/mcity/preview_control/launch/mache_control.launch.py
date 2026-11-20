@@ -46,6 +46,12 @@ def launch_setup(context):
                 {"brake_rate": 0.5},            # 1/s max brake rise (estop not limited)
                 # MachE brake cmd 0..1 = 0..100 %: brake = brake_gain * decel [m/s^2] (MKZ table started at 18 %)
                 {"brake_gain": 0.05},
+                # MachE lift-off regen decel. Below the throttle table's 0.15 minimum, blend throttle to 0
+                # over this decel range instead of cutting it (2026-11-20 drive: 0.15 -> 0 cuts every 2.4 s
+                # at ~6 m/s = surge/regen "braking"). Measured -0.27..-0.48 m/s^2 at 3-7 m/s; provisional.
+                {"lift_decel": 0.35},
+                # clear the speed PI integral while by-wire is off (driver driving), so engage doesn't surge
+                {"reset_when_dbw_off": True},
                 # slow for turns: v <= sqrt(curve_lat_acc / curvature) (12 m radius -> 3.5 m/s),
                 # reached at curve_decel before the turn, never below curve_min_speed; curve_lat_acc 0 = off
                 {"curve_lat_acc": 1.0},         # m/s^2; Nov 2 drives took turns at up to 1.8

@@ -25,6 +25,8 @@ namespace preview_control
         this->declare_parameter("throttle_rate", 0.0);
         this->declare_parameter("brake_rate", 0.0);
         this->declare_parameter("brake_gain", 0.0);
+        this->declare_parameter("lift_decel", 0.0);
+        this->declare_parameter("reset_when_dbw_off", false);
         this->declare_parameter("curve_lat_acc", 0.0);
         this->declare_parameter("curve_decel", 1.0);
         this->declare_parameter("curve_min_speed", 0.0);
@@ -51,6 +53,8 @@ namespace preview_control
         this->get_parameter("throttle_rate", throttle_rate);
         this->get_parameter("brake_rate", brake_rate);
         this->get_parameter("brake_gain", brake_gain);
+        this->get_parameter("lift_decel", lift_decel);
+        this->get_parameter("reset_when_dbw_off", reset_when_dbw_off);
         this->get_parameter("curve_lat_acc", curve_lat_acc);
         this->get_parameter("curve_decel", curve_decel);
         this->get_parameter("curve_min_speed", curve_min_speed);
@@ -97,6 +101,7 @@ namespace preview_control
         pathFollow.set_steer_rate_limit(steer_rate_limit);
         speedCtrl.ini(_p2c, _vs, _ctrl, speed_ctrl_kp, speed_ctrl_ki, FREQ);
         speedCtrl.set_smoothing(max_speed, coast_band, throttle_rate, brake_rate, brake_gain);
+        speedCtrl.set_lift_off(lift_decel, reset_when_dbw_off);
     }
 
     void PreviewControl::publishCmd()

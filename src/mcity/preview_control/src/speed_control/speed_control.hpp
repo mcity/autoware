@@ -94,6 +94,7 @@ public:
 
     void set_smoothing(float max_speed_, float coast_band_, float throttle_rate_, float brake_rate_,
                        float brake_gain_);
+    void set_lift_off(float lift_decel_, bool reset_when_dbw_off_);
     int  run();
     void set_stop();
     void setestop_level_high();
@@ -114,6 +115,11 @@ private:
     float throttle_rate = 0.0f;      // max throttle rise [1/s], 0 = no limit
     float brake_rate    = 0.0f;      // max brake rise [1/s], 0 = no limit
     float brake_gain    = 0.0f;      // brake per m/s^2 of decel (0..1 cmd); 0 = MKZ BRAKETABLE
+    // Decel [m/s^2] the car gets at zero throttle (MachE regen). Below the throttle table's lowest
+    // entry, throttle blends linearly from THROTTLETABLE[0] to 0 over this decel range instead of
+    // jumping to 0. 0 = off (old behaviour: anything below accT[0] cuts throttle to 0).
+    float lift_decel    = 0.0f;
+    bool  reset_when_dbw_off = false; // clear PI integral + pedal rate limiters while by-wire is off
     float throttle_out  = 0.0f;
     float brake_out     = 0.0f;
 
