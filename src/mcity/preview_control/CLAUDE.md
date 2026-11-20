@@ -52,6 +52,12 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
   2026-10-26 retune after the first drive (ey drifted to 1.6 m -> path-departure stops): withdelay r=1 and
   q_ey x4 (k_ey ~ the old MKZ x1.4 setup). Eased to q_ey x2 after the 2nd drive (steering too aggressive). Damping >= 0.33 up to 15 m/s, thin above (not for highway
   speed yet). withoutdelay r=32. `update_from_drive.py --vmax` defaults to 15 m/s.
+  2026-11-20: steering weaved in turns (S-overshoot, |ey| 1.3-1.7 m). Drive fit: delay 0.03 s, tau 0.094 s, K 1.00,
+  so the old tables (designed for delay 0.2 / tau 0.15) had damping ~0.20 on the real car: they treated 5 already-applied
+  commands as still pending (k_d spread over all buffer slots). Regenerated with delay 0.04 (1 step), tau 0.094,
+  withdelay r=2: damping 0.76 at 6 m/s, k_ey 71 % of before. Ratio and Cf/Cr are still template values.
+  `update_from_drive.py` rejects delay < 0.04 and judges stability on params.json, so it picked r=0.5 against the
+  old 0.2 s model: check the installed table on the measured plant (`closed_loop_radius`) before trusting its r.
 - Regenerate / calibrate with the skill in `~/autoware/.claude/skills/preview-gain-calibration/` (SKILL.md):
   ```bash
   S=~/autoware/.claude/skills/preview-gain-calibration/scripts; source ~/autoware/install/setup.bash
