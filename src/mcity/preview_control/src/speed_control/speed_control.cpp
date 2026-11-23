@@ -181,6 +181,11 @@ void SpeedControl::set_stop_braking(float stop_decel_, float stop_brake_gain_)
     stop_brake_gain = MAX(0.0f, stop_brake_gain_);
 }
 
+void SpeedControl::set_max_accel(float max_accel_)
+{
+    max_accel = MAX(0.0f, max_accel_);
+}
+
 void SpeedControl::set_lift_off(float lift_decel_, bool reset_when_dbw_off_)
 {
     lift_decel         = MAX(0.0f, lift_decel_);
@@ -203,6 +208,22 @@ int SpeedControl::run()
     bool stop_ahead = stop_decel > 0 && _p2c->stop_dist < 1e8;
     if (stop_ahead)
         SC.vd = MIN(SC.vd, std::sqrt(2.0f * stop_decel * MAX(0.0f, float(_p2c->stop_dist))));
+
+    // measured acceleration (low-passed speed derivative, ~0.3 s lag)
+    float dt = 1.0f / frequence;
+    if (!accel_init) { v_filt = SC.speed_x; a_filt = 0.0f; vd_ramp = SC.speed_x; accel_init = true; }
+    float v_prev = v_filt;
+    v_filt += (dt / (0.15f + dt)) * (SC.speed_x - v_filt);
+    a_filt += (dt / (0.15f + dt)) * ((v_filt - v_prev) / dt - a_filt);
+
+    // ramp the speed target up at max_accel (down immediately); restart from the actual speed while not driving
+    if (max_accel > 0)
+    {
+        if (!_vs->by_wire_enabled)
+            vd_ramp = SC.speed_x;
+        vd_ramp = MIN(SC.vd, MIN(vd_ramp + max_accel * dt, SC.speed_x + 1.0f));
+        SC.vd = vd_ramp;
+    }
 
     // ************************************************************
     //step 1: estimate road slope and mileage
@@ -297,6 +318,33 @@ int SpeedControl::run()
     else
         stop_braking = false;
 
+    // step 10: acceleration governor. Over max_accel take throttle back (1.5/s per m/s^2 over, not slowed by
+    // throttle_fall_rate); above half of it, don't add throttle. Pulling away from a stop: at most 0.12 (MachE:
+    // ~1 m/s^2 at low speed; the standstill branch of get_padel_opening asks 0.22-0.42). Tuned in a longitudinal
+    // model with the measured MachE throttle response: launch 1.8 mph/s, curve exit 1.5 mph/s at max_accel 0.7.
+    bool governing = false;
+    if (max_accel > 0 && SC.throttle_cmd > 0)
+    {
+        if (SC.speed_x < 0.2f)
+            SC.throttle_cmd = MIN(SC.throttle_cmd, 0.12f);
+        if (a_filt > max_accel)
+        {
+            SC.throttle_cmd = MAX(0.0f, MIN(SC.throttle_cmd, throttle_out - 1.5f * (a_filt - max_accel) * dt));
+            governing = true;
+        }
+        else if (a_filt > 0.5f * max_accel)
+            SC.throttle_cmd = MIN(SC.throttle_cmd, throttle_out);
+    }
+
+    // a tiny brake request while still on throttle: ease the throttle off (throttle_fall_rate) instead of cutting
+    // it at once. 2026-11-23: brake 0.02 dropped throttle 0.20 -> 0 in one step (1.4 m/s^2 jolt at 39 s).
+    if (throttle_fall_rate > 0 && throttle_out > 0.02f && SC.brake_cmd > 0 && SC.brake_cmd < 0.06f
+        && !stop_braking && _p2c->estop == estop_NONE)
+    {
+        SC.brake_cmd    = 0.0f;
+        SC.throttle_cmd = 0.0f;
+    }
+
     // ********************** OUTPUT *******************
     SC.throttle_cmd  = MAX(0.0f, MIN( MAX_THROTTLE, SC.throttle_cmd ));
     SC.brake_cmd     = MAX(0.0f, MIN( MAX_BRAKE,    SC.brake_cmd ));
@@ -309,7 +357,7 @@ int SpeedControl::run()
         SC.throttle_cmd = MIN(SC.throttle_cmd, throttle_out + throttle_rate / frequence);
     // ease off the throttle too (MachE lift-off = regen jolt), but only while no brake is wanted:
     // a brake request still drops the throttle at once (brake > 0 forces throttle 0 above)
-    if (throttle_fall_rate > 0 && SC.throttle_cmd < throttle_out && SC.brake_cmd <= 0.0f)
+    if (throttle_fall_rate > 0 && SC.throttle_cmd < throttle_out && SC.brake_cmd <= 0.0f && !governing)
         SC.throttle_cmd = MAX(SC.throttle_cmd, throttle_out - throttle_fall_rate / frequence);
     if (brake_rate > 0 && SC.brake_cmd > brake_out)
         SC.brake_cmd = MIN(SC.brake_cmd, brake_out + brake_rate / frequence);

@@ -235,6 +235,11 @@ void pathProcessing::find_stop_point(){
     while (j < n && _p2c->vd_vector[j] > stop_vd) j++;
     if (j >= n)
         return;
+    // Autoware's trajectory always ends with v = 0 on its last point, even mid-route (e.g. 5.0, 5.0, 0.0): that
+    // is the end of its horizon, not a stop. A real stop is approached slowly (goal: ... 0.65, 0.27, 0.0) or has
+    // more stopped points after it (stop line).
+    if (j == n - 1 && j > 0 && _p2c->vd_vector[j - 1] >= 2.0f)
+        return;
 
     stop_x = _p2c->x_vector[j];
     stop_y = _p2c->y_vector[j];

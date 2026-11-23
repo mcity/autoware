@@ -30,6 +30,7 @@ namespace preview_control
         this->declare_parameter("throttle_rate", 0.0);
         this->declare_parameter("throttle_fall_rate", 0.0);
         this->declare_parameter("stop_decel", 0.0);
+        this->declare_parameter("max_accel", 0.0);
         this->declare_parameter("stop_brake_gain", 0.12);
         this->declare_parameter("brake_rate", 0.0);
         this->declare_parameter("brake_gain", 0.0);
@@ -67,6 +68,7 @@ namespace preview_control
         this->get_parameter("throttle_rate", throttle_rate);
         this->get_parameter("throttle_fall_rate", throttle_fall_rate);
         this->get_parameter("stop_decel", stop_decel);
+        this->get_parameter("max_accel", max_accel);
         this->get_parameter("stop_brake_gain", stop_brake_gain);
         this->get_parameter("brake_rate", brake_rate);
         this->get_parameter("brake_gain", brake_gain);
@@ -126,6 +128,7 @@ namespace preview_control
         speedCtrl.set_lift_off(lift_decel, reset_when_dbw_off);
         speedCtrl.set_throttle_fall_rate(throttle_fall_rate);
         speedCtrl.set_stop_braking(stop_decel, stop_brake_gain);
+        speedCtrl.set_max_accel(max_accel);
     }
 
     void PreviewControl::publishCmd()

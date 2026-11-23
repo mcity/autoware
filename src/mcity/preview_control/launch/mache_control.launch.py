@@ -48,6 +48,10 @@ def launch_setup(context):
                 # v^2 / (2 * distance left) once that reaches 0.48. 2026-11-20 13:18 the car stopped 7.6 m past the
                 # goal (brake 0.06 via brake_gain). stop_brake_gain 0.12 per m/s^2 is from that day's bags.
                 {"stop_decel": 0.8},            # m/s^2, 0 = off
+                # acceleration limit: user limit "no more than 2 mph in a second" = 0.89 m/s^2. 2026-11-23 drive:
+                # surges to 1.9 m/s^2 (4 mph/s) after curves and on launch. 0.7 leaves margin for the governor's
+                # ~0.3 s lag (model: launch 1.8 mph/s, curve exit 1.5 mph/s). 0 = off
+                {"max_accel": 0.7},             # m/s^2 (1.6 mph/s target)
                 {"stop_brake_gain": 0.12},
                 {"brake_rate": 0.5},            # 1/s max brake rise (estop not limited)
                 # MachE brake cmd 0..1 = 0..100 %: brake = brake_gain * decel [m/s^2] (MKZ table started at 18 %)

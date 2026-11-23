@@ -97,6 +97,7 @@ public:
     void set_lift_off(float lift_decel_, bool reset_when_dbw_off_);
     void set_throttle_fall_rate(float rate);
     void set_stop_braking(float stop_decel_, float stop_brake_gain_);
+    void set_max_accel(float max_accel_);
     int  run();
     void set_stop();
     void setestop_level_high();
@@ -132,6 +133,14 @@ private:
     const float stop_regen     = 0.1f;  // [m/s^2] decel at zero throttle (measured MachE, by-wire)
     const float stop_decel_max = 2.5f;  // [m/s^2] cap when the car is late (at / past the point)
     bool  stop_braking = false;
+    // Acceleration limit [m/s^2], 0 = off. The speed target rises at most max_accel (and at most 1 m/s above the
+    // actual speed), and a governor on the measured acceleration backs the throttle off above it: the MKZ throttle
+    // table asks ~0.2 for 0.8 m/s^2, which gives the MachE ~1.6 at low speed.
+    float max_accel  = 0.0f;
+    float vd_ramp    = 0.0f;
+    float v_filt     = 0.0f;
+    float a_filt     = 0.0f;
+    bool  accel_init = false;
     float throttle_out  = 0.0f;
     float brake_out     = 0.0f;
 
