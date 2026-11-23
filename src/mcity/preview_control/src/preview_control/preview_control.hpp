@@ -86,6 +86,8 @@ private:
     double coast_band               = 0.0;
     double throttle_rate            = 0.0;
     double throttle_fall_rate       = 0.0;
+    double stop_decel               = 0.0;
+    double stop_brake_gain          = 0.12;
     double brake_rate               = 0.0;
     double brake_gain               = 0.0;
     double lift_decel               = 0.0;

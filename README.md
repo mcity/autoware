@@ -1,6 +1,6 @@
 # Autoware
 
-This is the Mcity-adapted version of Autoware Universe, based on the October 2023 release and extensively modified. This branch (`autoware_ubuntu_24`) targets **ROS 2 Jazzy on Ubuntu 24.04**; the `main` branch targets ROS 2 Humble on Ubuntu 22.04. If you are looking for the most up-to-date Autoware Universe, please check out the official [**Documentation**](https://autowarefoundation.github.io/autoware-documentation/main/).
+This is the Mcity-adapted version of Autoware Universe, based on the October 2023 release and extensively modified. The `main` branch targets **ROS 2 Jazzy on Ubuntu 24.04**; the `autoware_ubuntu_22` branch keeps the ROS 2 Humble / Ubuntu 22.04 version. If you are looking for the most up-to-date Autoware Universe, please check out the official [**Documentation**](https://autowarefoundation.github.io/autoware-documentation/main/).
 
 
 ## Prerequisites
@@ -22,7 +22,7 @@ sudo apt-get install libhiredis-dev libgeographiclib-dev ccache python3-rosdep p
 ### Clone the repository
 
 ```bash
-git clone -b autoware_ubuntu_24 https://github.com/mcity/autoware.git
+git clone https://github.com/mcity/autoware.git
 ```
 
 ### Navigate to the Autoware directory

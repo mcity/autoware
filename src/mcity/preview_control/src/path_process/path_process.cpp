@@ -65,6 +65,7 @@ void pathProcessing::run(){
     _p2c->ephi = get_orientation_error(closest_index);
     _p2c->ey = get_lateral_error(closest_index);
     _p2c->slope = get_slope();
+    _p2c->stop_dist = get_stop_distance();
     fill_curvature_preview(closest_index);
 
     RCLCPP_INFO(rclcpp::get_logger("path_process"), "remaining length %d", size);
@@ -108,6 +109,8 @@ int pathProcessing::get_closest_index(){
 }
 
 void pathProcessing::process_path(double desired_time_resolution, double preview_time) {
+    find_stop_point();
+
     // fall back to fixed 0.2 m spacing when the time-based parameters are not set
     if (desired_time_resolution <= 0.0 || preview_time <= 0.0){
         resampling();
@@ -207,6 +210,76 @@ void pathProcessing::set_curve_speed(double lat_acc_, double decel_, double min_
     curve_lat_acc   = lat_acc_;
     curve_decel     = decel_ > 0 ? decel_ : 1.0;
     curve_min_speed = min_speed_;
+}
+
+// The planner ends its trajectory (goal) or a stop line with vd = 0. Remember where, on the full-resolution path:
+// downsampling can drop the last point.
+void pathProcessing::find_stop_point(){
+    stop_valid = false;
+    size_t n = MIN(_p2c->x_vector.size(), _p2c->vd_vector.size());
+    if (n < 2)
+        return;
+
+    size_t ic = 0;
+    double best = std::numeric_limits<double>::max();
+    for (size_t i = 0; i < n; i++){
+        double d = std::hypot(_p2c->x_vector[i] - _vs->pos_x, _p2c->y_vector[i] - _vs->pos_y);
+        if (d < best){ best = d; ic = i; }
+    }
+
+    const float stop_vd = 0.05f;
+    size_t j = ic;
+    // standing at a hold point: the stop that matters is the next one, not the one we are on
+    if (_vs->speed_x < 0.3)
+        while (j < n && _p2c->vd_vector[j] <= stop_vd) j++;
+    while (j < n && _p2c->vd_vector[j] > stop_vd) j++;
+    if (j >= n)
+        return;
+
+    stop_x = _p2c->x_vector[j];
+    stop_y = _p2c->y_vector[j];
+    size_t a = j > 0 ? j - 1 : 0, b = j > 0 ? j : 1;
+    double tx = _p2c->x_vector[b] - _p2c->x_vector[a], ty = _p2c->y_vector[b] - _p2c->y_vector[a];
+    double len = std::hypot(tx, ty);
+    if (len < 1e-3)
+        return;
+    stop_tx = tx / len;
+    stop_ty = ty / len;
+    stop_valid = true;
+}
+
+// Signed distance [m] along the (processed) path from the vehicle to the stop point; negative once passed.
+double pathProcessing::get_stop_distance(){
+    if (!stop_valid)
+        return 1e9;
+
+    size_t n = _p2c->x_vector.size();
+    if (n < 2)
+        return (stop_x - _vs->pos_x) * stop_tx + (stop_y - _vs->pos_y) * stop_ty;
+
+    std::vector<double> s(n, 0.0);
+    for (size_t i = 1; i < n; i++)
+        s[i] = s[i - 1] + std::hypot(_p2c->x_vector[i] - _p2c->x_vector[i - 1], _p2c->y_vector[i] - _p2c->y_vector[i - 1]);
+
+    auto nearest = [&](double x, double y){
+        size_t k = 0; double bd = std::numeric_limits<double>::max();
+        for (size_t i = 0; i < n; i++){
+            double d = std::hypot(_p2c->x_vector[i] - x, _p2c->y_vector[i] - y);
+            if (d < bd){ bd = d; k = i; }
+        }
+        return k;
+    };
+    // offset of (x, y) along the path direction at point k
+    auto along = [&](size_t k, double x, double y){
+        size_t a = (k + 1 < n) ? k : k - 1, b = a + 1;
+        double tx = _p2c->x_vector[b] - _p2c->x_vector[a], ty = _p2c->y_vector[b] - _p2c->y_vector[a];
+        double len = std::hypot(tx, ty);
+        if (len < 1e-6) return 0.0;
+        return ((x - _p2c->x_vector[k]) * tx + (y - _p2c->y_vector[k]) * ty) / len;
+    };
+
+    size_t ic = nearest(_vs->pos_x, _vs->pos_y), is = nearest(stop_x, stop_y);
+    return (s[is] - s[ic]) + along(is, stop_x, stop_y) - along(ic, _vs->pos_x, _vs->pos_y);
 }
 
 void pathProcessing::set_curve_lookahead(double seconds_){

@@ -44,6 +44,11 @@ def launch_setup(context):
                 {"coast_band": 0.6},            # m/s^2 of decel handled by lift-off before any brake
                 {"throttle_rate": 0.15},        # 1/s max throttle rise (2026-11-20: 0.3 -> 0.15, "sudden throttle")
                 {"throttle_fall_rate": 0.3},    # 1/s max throttle drop while no brake is wanted (was immediate)
+                # stop-point braking (goal / stop line where the plan's vd -> 0): aim for 0.8 m/s^2, and brake for
+                # v^2 / (2 * distance left) once that reaches 0.48. 2026-11-20 13:18 the car stopped 7.6 m past the
+                # goal (brake 0.06 via brake_gain). stop_brake_gain 0.12 per m/s^2 is from that day's bags.
+                {"stop_decel": 0.8},            # m/s^2, 0 = off
+                {"stop_brake_gain": 0.12},
                 {"brake_rate": 0.5},            # 1/s max brake rise (estop not limited)
                 # MachE brake cmd 0..1 = 0..100 %: brake = brake_gain * decel [m/s^2] (MKZ table started at 18 %)
                 {"brake_gain": 0.05},

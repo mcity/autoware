@@ -175,6 +175,12 @@ void SpeedControl::set_throttle_fall_rate(float rate)
     throttle_fall_rate = MAX(0.0f, rate);
 }
 
+void SpeedControl::set_stop_braking(float stop_decel_, float stop_brake_gain_)
+{
+    stop_decel      = MAX(0.0f, stop_decel_);
+    stop_brake_gain = MAX(0.0f, stop_brake_gain_);
+}
+
 void SpeedControl::set_lift_off(float lift_decel_, bool reset_when_dbw_off_)
 {
     lift_decel         = MAX(0.0f, lift_decel_);
@@ -192,6 +198,11 @@ int SpeedControl::run()
     // *************** step 0: INPUT, Assignment *****************
     SC.vd       = MIN(_p2c->vd, max_speed);
     SC.speed_x  = MAX(0.0, _vs->speed_x);
+
+    // planned stop ahead: never aim faster than what stop_decel can still stop in the remaining distance
+    bool stop_ahead = stop_decel > 0 && _p2c->stop_dist < 1e8;
+    if (stop_ahead)
+        SC.vd = MIN(SC.vd, std::sqrt(2.0f * stop_decel * MAX(0.0f, float(_p2c->stop_dist))));
 
     // ************************************************************
     //step 1: estimate road slope and mileage
@@ -256,6 +267,36 @@ int SpeedControl::run()
             SC.brake_cmd = 0.05f + ABS(SLOPE2PADEL);
     }
  
+    // step 9: stop-point braking. The PI + coast band brakes far too softly for a stop (2026-11-20: the car
+    // crossed the goal at 2.8 m/s with brake 0.06 and stopped 7.6 m past it). Brake for the decel the
+    // remaining distance needs; it self-corrects: braking too little makes v^2 / 2d grow.
+    if (stop_ahead)
+    {
+        float d = float(_p2c->stop_dist);
+        float a_req = (d > 0.05f) ? SC.speed_x * SC.speed_x / (2.0f * d) : stop_decel_max;
+        if (SC.speed_x > 0.3f && a_req >= 0.6f * stop_decel)
+            stop_braking = true;
+        else if (SC.speed_x <= 0.3f || a_req < 0.3f * stop_decel)
+            stop_braking = false;
+
+        if (stop_braking)
+        {
+            float a = MIN(a_req, stop_decel_max);
+            SC.errIntg      = 0.0f;
+            SC.throttle_cmd = 0.0f;
+            SC.brake_cmd    = MAX(SC.brake_cmd, stop_brake_gain * MAX(0.0f, a - stop_regen));
+        }
+        // at (or past) the point and nearly stopped: hold like set_stop()
+        if (d < 0.3f && SC.speed_x < 0.5f)
+        {
+            SC.errIntg      = 0.0f;
+            SC.throttle_cmd = 0.0f;
+            SC.brake_cmd    = MAX(SC.brake_cmd, 0.22f);
+        }
+    }
+    else
+        stop_braking = false;
+
     // ********************** OUTPUT *******************
     SC.throttle_cmd  = MAX(0.0f, MIN( MAX_THROTTLE, SC.throttle_cmd ));
     SC.brake_cmd     = MAX(0.0f, MIN( MAX_BRAKE,    SC.brake_cmd ));

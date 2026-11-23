@@ -47,6 +47,8 @@ private:
     void compute_curvature();
     void fill_curvature_preview(int closest_index);
     void compute_curve_speed();
+    void find_stop_point();        // on the raw planner path, before downsampling
+    double get_stop_distance();
     int get_closest_index();
 
     double get_desired_velocity(int closest_index);
@@ -78,6 +80,10 @@ private:
 
     // feedforward: signed path curvature (left +, 1/m) per processed path point, and its arc length
     double ff_gain = 0.0;
+
+    // next planned stop point (first point ahead with vd <= 0.05) and the path direction there
+    bool   stop_valid = false;
+    double stop_x = 0.0, stop_y = 0.0, stop_tx = 1.0, stop_ty = 0.0;
     std::vector<double> path_s, path_kappa;
 };
 

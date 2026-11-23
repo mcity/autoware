@@ -96,6 +96,7 @@ public:
                        float brake_gain_);
     void set_lift_off(float lift_decel_, bool reset_when_dbw_off_);
     void set_throttle_fall_rate(float rate);
+    void set_stop_braking(float stop_decel_, float stop_brake_gain_);
     int  run();
     void set_stop();
     void setestop_level_high();
@@ -122,6 +123,15 @@ private:
     // jumping to 0. 0 = off (old behaviour: anything below accT[0] cuts throttle to 0).
     float lift_decel    = 0.0f;
     bool  reset_when_dbw_off = false; // clear PI integral + pedal rate limiters while by-wire is off
+    // Stop-point braking (planned stop: goal / stop line, _p2c->stop_dist). The speed target is capped at
+    // sqrt(2 * stop_decel * distance), and once v^2 / (2 * distance) reaches 0.6 * stop_decel the brake follows
+    // that required decel directly (stop_brake_gain per m/s^2 above regen), bypassing coast_band / brake_gain.
+    // 0 = off.
+    float stop_decel      = 0.0f;   // [m/s^2] comfortable stopping decel
+    float stop_brake_gain = 0.12f;  // brake cmd (0..1) per m/s^2; MachE 2026-11-20: 3-6 % -> ~0.46 m/s^2
+    const float stop_regen     = 0.1f;  // [m/s^2] decel at zero throttle (measured MachE, by-wire)
+    const float stop_decel_max = 2.5f;  // [m/s^2] cap when the car is late (at / past the point)
+    bool  stop_braking = false;
     float throttle_out  = 0.0f;
     float brake_out     = 0.0f;
 

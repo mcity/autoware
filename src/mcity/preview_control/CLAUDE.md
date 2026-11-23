@@ -7,6 +7,7 @@ gain tables only; the MKZ tables are kept just for CARLA.
 | Group | Values |
 |---|---|
 | Speed | `max_speed` 6.0, PI `kp` 1.0 / `ki` 0.3, `coast_band` 0.6, `lift_decel` 0.35, `reset_when_dbw_off` true |
+| Stops | `stop_decel` 0.8 m/s^2, `stop_brake_gain` 0.12 (goal / stop-line braking, see below) |
 | Pedals | `throttle_rate` 0.15/s up, `throttle_fall_rate` 0.3/s down (only when no brake is wanted), `brake_rate` 0.5/s, `brake_gain` 0.05 |
 | Curves | `curve_lat_acc` 0.6, `curve_decel` 0.6, `curve_min_speed` 2.0, `curve_lookahead` 1.5 s |
 | Steering | `steer_filter_tau` 0.20 s, `steer_rate_limit` 2.5 rad/s (3.6 at <= 2.5 m/s via `steer_rate_limit_low`, blended to 4.5 m/s), `feedforward_gain` 0.75, `heading_offset` -0.03 |
@@ -62,10 +63,17 @@ A rough drive is not always the controller: first check the pose feed (root CLAU
     Bags: `~/bags/highway_clean_20261120_125120` (before), `ff075_20261120_130326`, `steer_lowspeed_20261120_131707`.
 
 ## Known open issues (2026-11-20)
-- **Goal overrun**: the 13:18 drive stopped 7.6 m past the end of the path (plan vd -> 0). The car was still at
-  ~2.5 m/s 4 s before the end, brake stayed ~0.06 (`brake_gain` 0.05, regen first), and the 0.22 stop hold came
-  only after passing the end. Nothing in the speed loop looks at the distance left to the stop point. Planned fix:
-  when the path ends within reach, brake for v^2 / (2 * distance left). Until then the safety driver stops the car.
+- **Goal overrun (fix added 2026-11-23, not yet driven)**: the 13:18 drive stopped 7.6 m past the goal. The plan's
+  vd only fell in the last ~12 m, the PI even added throttle 12 m out, and the coast band + `brake_gain` 0.05 gave
+  brake 0.03-0.06 (the 0.22 hold came 3 s after passing the end). Fix: `path_process::find_stop_point()` takes the
+  first raw-path point ahead with vd <= 0.05 (before downsampling, which can drop the last point; leading zero-vd
+  points are skipped while standing), and `_p2c->stop_dist` is the signed distance to it along the path. The speed
+  loop caps vd at sqrt(2 * `stop_decel` * d) and, once v^2 / 2d >= 0.6 * stop_decel, brakes
+  `stop_brake_gain` * (v^2 / 2d - 0.1) directly (cap 2.5 m/s^2), then holds 0.22 at the point. A model with the
+  measured brake (+-30 %) stops within 0.7 m of the point. Check the first stops on the car with a hand ready.
+- **`brake_gain` 0.05 is ~3x too weak**: 2026-11-20 bags (by-wire, no throttle, > 1 m/s): brake 3-6 % -> 0.46 m/s^2,
+  6-10 % -> 0.56, zero throttle alone ~0.1 (not the 0.3 `lift_decel` assumes). Left as is because the curve slowdown
+  was tuned with it; the stop braking uses its own `stop_brake_gain` 0.12.
 - **Hesitant start**: right after engaging, Autoware planned 0.25 m/s, the PI raised throttle to 0.45 over ~4 s while
   the car stayed at ~0.6 m/s for ~6 s; then the plan rose and the car went 0.7 -> 3.9 m/s in ~3 s with throttle
   <= 0.2. Not explained yet (check `/vehicle/throttle/report` in that bag, 13:18:45-13:18:55).
@@ -135,5 +143,5 @@ Quick check: our build logs `Loaded <N> slope points from ...`; the other one lo
   still MKZ values; lateral control does not use them. `VehicleState.speed_x` from by-wire uses the same 0.673 m
   wheel and reads ~5.9 % low on the Mach-E (true diameter ~0.713 m).
 - New params added on this branch: `lift_decel`, `reset_when_dbw_off`, `steer_filter_tau`, `throttle_fall_rate`,
-  `feedforward_gain`, `curve_lookahead`, `steer_rate_limit_low` (+ `steer_rate_v_low/high`). All default to 0/false (old behaviour) in the node, so only `mache_control.launch.py` enables them.
+  `feedforward_gain`, `curve_lookahead`, `steer_rate_limit_low` (+ `steer_rate_v_low/high`), `stop_decel`, `stop_brake_gain`. All default to 0/false (old behaviour) in the node, so only `mache_control.launch.py` enables them.
 - Build: `colcon build --packages-select preview_control` (C++ changes only).

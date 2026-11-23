@@ -137,6 +137,7 @@ public:
     double acc_dd = 0.0f;
     double slope  = 0.0f;
     double vmax   = 0.0f;
+    double stop_dist = 1e9; // [m] along the path to the next planned stop (vd ~ 0), < 0 once passed; 1e9 = none
 
     double ey     = 0.0f;
     double ephi   = 0.0f;

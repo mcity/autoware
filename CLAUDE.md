@@ -3,8 +3,9 @@
 Mcity's fork of Autoware Universe (Oct 2023 base). Mcity code lives in `src/mcity/`. The real car is a
 Ford Mach-E driven through a Dataspeed DBW kit.
 
-**Branch `autoware_ubuntu_24` targets ROS 2 Jazzy on Ubuntu 24.04** (gcc 13, Python 3.12). `main` stays on
-Humble / Ubuntu 22.04. Jazzy port notes:
+**`main` targets ROS 2 Jazzy on Ubuntu 24.04** (gcc 13, Python 3.12). Since 2026-11-23 the Jazzy port (formerly branch
+`autoware_ubuntu_24`) is `main` on GitHub; the old Humble / Ubuntu 22.04 `main` is now branch `autoware_ubuntu_22`.
+Jazzy port notes:
 - Use the `.hpp` headers for cv_bridge, tf2_geometry_msgs, tf2_eigen and image_geometry. Jazzy removed the `.h` versions.
 - `autoware_cmake` keeps `-Werror` but makes deprecated-declarations and gcc 13
   dangling-reference/maybe-uninitialized warnings non-fatal, and defines `ROS_DISTRO_JAZZY`.
@@ -19,7 +20,7 @@ Prerequisites: Ubuntu 24.04 with ROS 2 Jazzy Desktop installed in `/opt/ros/jazz
 ```bash
 sudo apt-get install -y libhiredis-dev libgeographiclib-dev ccache python3-rosdep \
   python3-colcon-common-extensions ros-jazzy-rmw-cyclonedds-cpp
-git clone -b autoware_ubuntu_24 https://github.com/mcity/autoware.git ~/autoware
+git clone https://github.com/mcity/autoware.git ~/autoware
 cd ~/autoware
 source /opt/ros/jazzy/setup.bash
 sudo rosdep init        # "already initialized" error is fine
