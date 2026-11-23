@@ -51,7 +51,8 @@ def launch_setup(context):
                 # acceleration limit: user limit "no more than 2 mph in a second" = 0.89 m/s^2. 2026-11-23 drive:
                 # surges to 1.9 m/s^2 (4 mph/s) after curves and on launch. 0.7 leaves margin for the governor's
                 # ~0.3 s lag (model: launch 1.8 mph/s, curve exit 1.5 mph/s). 0 = off
-                {"max_accel": 0.7},             # m/s^2 (1.6 mph/s target)
+                # 2026-11-23 10:38 drive at 0.7: max 2.2 mph gained in 1 s (2.2 s total over 2 mph/s, was 9 s) -> 0.6
+                {"max_accel": 0.6},             # m/s^2 (1.3 mph/s target)
                 {"stop_brake_gain": 0.12},
                 {"brake_rate": 0.5},            # 1/s max brake rise (estop not limited)
                 # MachE brake cmd 0..1 = 0..100 %: brake = brake_gain * decel [m/s^2] (MKZ table started at 18 %)

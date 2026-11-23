@@ -8,7 +8,7 @@ gain tables only; the MKZ tables are kept just for CARLA.
 |---|---|
 | Speed | `max_speed` 6.0, PI `kp` 1.0 / `ki` 0.3, `coast_band` 0.6, `lift_decel` 0.35, `reset_when_dbw_off` true |
 | Stops | `stop_decel` 0.8 m/s^2, `stop_brake_gain` 0.12 (goal / stop-line braking, see below) |
-| Accel limit | `max_accel` 0.7 m/s^2 (user limit: < 2 mph gained per second = 0.89 m/s^2) |
+| Accel limit | `max_accel` 0.6 m/s^2 (user limit: < 2 mph gained per second = 0.89 m/s^2) |
 | Pedals | `throttle_rate` 0.15/s up, `throttle_fall_rate` 0.3/s down (only when no brake is wanted), `brake_rate` 0.5/s, `brake_gain` 0.05 |
 | Curves | `curve_lat_acc` 0.6, `curve_decel` 0.6, `curve_min_speed` 2.0, `curve_lookahead` 1.5 s |
 | Steering | `steer_filter_tau` 0.20 s, `steer_rate_limit` 2.5 rad/s (3.6 at <= 2.5 m/s via `steer_rate_limit_low`, blended to 4.5 m/s), `feedforward_gain` 0.75, `heading_offset` -0.03 |
@@ -76,7 +76,7 @@ A rough drive is not always the controller: first check the pose feed (root CLAU
   horizon). That zero is ignored when it is the last point and the point before is >= 2 m/s; a real goal is
   approached slowly (..., 0.65, 0.27, 0.0). Checked on bags: no false stops in 2679 plans of the 2026-11-23 drive,
   the 13:18 goal found 49 m out. The 2026-11-23 10:29 drive ended 97 m before its goal, so this is still untested.
-- **Surges (fixed 2026-11-23, not yet driven)**: the 10:29 drive gained up to 4 mph in 1 s (1.9 m/s^2) on launch and
+- **Surges (fixed 2026-11-23)**: the 10:29 drive gained up to 4 mph in 1 s (1.9 m/s^2) on launch and
   out of curves; user limit is 2 mph/s. The MKZ throttle table asks ~0.2 for 0.8 m/s^2, but the MachE gives
   ~1.1 m/s^2 at 10-15 % and ~1.5 at 15-20 % below 2.5 m/s (bags). `max_accel` 0.7: the speed target ramps up at
   that rate (and stays <= 1 m/s above the actual speed), a governor on the measured accel takes throttle back above
@@ -84,6 +84,10 @@ A rough drive is not always the controller: first check the pose feed (root CLAU
   measured response: launch 1.8 mph/s, curve exit 1.5 mph/s (without: 6.1 and 4.2; the car did 4.0).
   Also: a tiny brake request (< 0.06) while on throttle used to cut throttle 0.20 -> 0 in one step (1.4 m/s^2 jolt
   at 39 s); it now eases the throttle off at `throttle_fall_rate` instead.
+  10:38 drive at 0.7 ("feels better"): max gain 2.2 mph in 1 s (was 4.0), 2.2 s over 2 mph/s (was 9 s), max drop
+  2.0 mph/s, |ey| mean 0.15 m. Lowered to 0.6 for margin. Stop braking engaged 37 m before the goal at 6 m/s
+  (brake 0.03-0.06, ~0.45 m/s^2, on profile); the driver took over 12.7 m out, so the final stop is still untested.
+  Bag: `~/bags/accel_limit_20261123_103839`.
 - **`brake_gain` 0.05 is ~3x too weak**: 2026-11-20 bags (by-wire, no throttle, > 1 m/s): brake 3-6 % -> 0.46 m/s^2,
   6-10 % -> 0.56, zero throttle alone ~0.1 (not the 0.3 `lift_decel` assumes). Left as is because the curve slowdown
   was tuned with it; the stop braking uses its own `stop_brake_gain` 0.12.
