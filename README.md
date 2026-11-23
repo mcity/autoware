@@ -77,6 +77,20 @@ echo "export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" >> ~/.bashrc
 echo "export CYCLONEDDS_URI=file://\$HOME/autoware/cyclonedds.xml" >> ~/.bashrc
 ```
 
+On the Mach-E, use `/etc/ros/cyclonedds.xml` instead (`export CYCLONEDDS_URI=file:///etc/ros/cyclonedds.xml`). The
+vehicle driver service (DBW, OXTS INS, lidar) uses that file, and the stack must use the same one or it will not see the
+drivers' topics.
+
+## Real car (Ford Mach-E)
+
+- The drivers start at boot (`ros2-autostart.service`). Before engaging, check that `/ins/imu` runs at ~100 Hz,
+  `/ins/nav_sat_fix` and `/mcity/cav_pose` at ~50 Hz. A slow or stalling pose feed makes the steering weave; the OXTS
+  driver's `pub_path_rate` must be 0.
+- Controller: `ros2 launch preview_control mache_control.launch.py`. Its current Mach-E settings (speed cap 6 m/s,
+  curve slowdown, acceleration limit 0.6 m/s^2, stop-point braking, steering smoothing) and their tuning history are
+  in [src/mcity/preview_control/CLAUDE.md](src/mcity/preview_control/CLAUDE.md).
+- Record every test drive with `ros2 bag record` into `~/bags` (topic list in [CLAUDE.md](CLAUDE.md#recording-drives)).
+
 
 ## Run Autoware
 

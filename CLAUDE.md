@@ -111,7 +111,12 @@ Ask the user where to get it if the real-car chain is needed.
 - Steering engages (`report.enabled`) only when `SteeringCmd.control_mode = CONTROL_LANE_KEEP`.
 - `VehicleState.yaw_rate` is always 0 on the Mach-E. Derive yaw rate from steering angle and speed instead.
 - The brake command is 0..1, which by-wire sends as 0..100 %. Any brake > 0 cuts throttle.
-- Zero throttle is regen braking, about -0.3 m/s^2 (not coasting). preview_control's `lift_decel` handles this.
+- Zero throttle is regen braking (not coasting): ~-0.1 m/s^2 under by-wire in the 2026-11-20/23 bags (`lift_decel`
+  0.35 in preview_control was set from an earlier ~-0.3 estimate).
+- Pedal response (bags, by-wire): throttle 10-15 % -> ~1.1 m/s^2 and 15-20 % -> ~1.5 m/s^2 below 2.5 m/s; the MKZ
+  throttle table in preview_control under-predicts this, hence its `max_accel` governor. Brake 3-6 % -> ~0.46 m/s^2,
+  6-10 % -> ~0.56 m/s^2 (preview_control `brake_gain` 0.05 is ~3x too weak; stops use `stop_brake_gain` 0.12).
+- User comfort limit: gain no more than 2 mph (0.89 m/s^2) in a second. preview_control `max_accel` 0.6 enforces it.
 - `VehicleState.speed_x` = wheel rad/s x 0.3365 m (MKZ wheel radius) reads ~5.9 % low against the INS. The Mach-E
   wheel diameter is ~0.713 m. Not changed yet: the controller tuning and `max_speed` were done with the low reading.
 - Measured steering (2026-11-20): delay 0.03 s, actuator lag 0.094 s, tracks the command 1:1, steering ratio 14.43,
@@ -141,7 +146,9 @@ Ask the user where to get it if the real-car chain is needed.
 - References from 2026-11-20 in `~/bags`: `baseline_manual_20261120_112617` (in `~/mache_calib/drives/bags`) is the
   manual drive around the facility. `highway_clean_20261120_125120` is the first clean-INS autonomous highway run:
   straights 0.14 m mean |ey|, curves cut ~0.4 m. `steer_lowspeed_20261120_131707` is the run with all of that day's
-  preview_control fixes (curves 0.24 m mean |ey|). Open issues are listed in `src/mcity/preview_control/CLAUDE.md`.
+  preview_control fixes (curves 0.24 m mean |ey|). From 2026-11-23: `accel_limit_20261123_103839` is the first drive with
+  the acceleration limit and stop braking (max 2.2 mph/s at max_accel 0.7, since lowered to 0.6). Open issues are listed
+  in `src/mcity/preview_control/CLAUDE.md`.
 
 ## Shadowing (common source of "my change did nothing")
 Several workspaces install packages or libraries with the same names. Whichever is sourced **last** wins.
